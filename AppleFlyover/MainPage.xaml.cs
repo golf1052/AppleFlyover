@@ -110,6 +110,15 @@ namespace AppleFlyover
             }
             else
             {
+                DateTime now = DateTime.Now;
+                if (sunrise < now && now < sunset)
+                {
+                    cachedTimeOfDay = Movie.TimesOfDay.Day;
+                }
+                else
+                {
+                    cachedTimeOfDay = Movie.TimesOfDay.Night;
+                }
                 return cachedTimeOfDay;
             }
         }
@@ -142,6 +151,11 @@ namespace AppleFlyover
         }
 
         private async void mediaElement_MediaEnded(object sender, RoutedEventArgs e)
+        {
+            await PlayMovies();
+        }
+
+        private async void mediaElement_MediaFailed(object sender, ExceptionRoutedEventArgs e)
         {
             await PlayMovies();
         }
