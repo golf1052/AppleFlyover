@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -28,6 +29,7 @@ namespace AppleFlyover
         public MainPage()
         {
             this.InitializeComponent();
+            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
             movies = new List<Movie>();
             lastDownloaded = DateTime.MinValue;
             haveNotPulled = true;
@@ -41,7 +43,19 @@ namespace AppleFlyover
         {
             await DownloadJson(AppleUrl);
             await PlayMovies();
+            await UpdateClock();
+
             base.OnNavigatedTo(e);
+        }
+
+        private async Task UpdateClock()
+        {
+            while (true)
+            {
+                DateTime now = DateTime.Now;
+                timeBlock.Text = now.ToString("h:mm tt").ToLower();
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
         }
 
         private async Task DownloadJson(string url)

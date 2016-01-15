@@ -8,7 +8,11 @@
     mc:Ignorable="d">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <MediaElement x:Name="mediaElement" AreTransportControlsEnabled="True" MediaEnded="mediaElement_MediaEnded" MediaFailed="mediaElement_MediaFailed"/>
+        <MediaElement x:Name="mediaElement" MediaEnded="mediaElement_MediaEnded" MediaFailed="mediaElement_MediaFailed"/>
+        <Grid VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,50,50">
+            <Rectangle Fill="#7F000000" d:LayoutOverrides="LeftPosition, RightPosition, TopPosition, BottomPosition"/>
+            <TextBlock x:Name="timeBlock" TextWrapping="Wrap" Text="88:88 am" VerticalAlignment="Center" Margin="0" d:LayoutOverrides="Width, LeftPosition, RightPosition" HorizontalAlignment="Center" FontSize="96" Foreground="White" Padding="50,25"/>
+        </Grid>
 
     </Grid>
 </Page>
