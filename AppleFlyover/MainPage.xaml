@@ -7,7 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid Background="Black">
         <MediaElement x:Name="mediaElement" MediaEnded="mediaElement_MediaEnded" MediaFailed="mediaElement_MediaFailed"/>
         <Grid VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,50,50">
             <Rectangle Fill="#7F000000" d:LayoutOverrides="LeftPosition, RightPosition, TopPosition, BottomPosition"/>
