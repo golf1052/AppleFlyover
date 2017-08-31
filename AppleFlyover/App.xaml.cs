@@ -104,5 +104,10 @@ namespace AppleFlyover
             //TODO: Save application state and stop any background activity
             deferral.Complete();
         }
+
+        public static void Start(ApplicationInitializationCallback callback)
+        {
+            System.Diagnostics.Debug.WriteLine("test");
+        }
     }
 }
