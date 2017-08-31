@@ -51,7 +51,6 @@ namespace AppleFlyover
         {
             await DownloadJson(AppleUrl);
             await PlayMovies();
-            mediaPlayerElement.IsFullWindow = true;
             UpdateClock();
 
             base.OnNavigatedTo(e);
