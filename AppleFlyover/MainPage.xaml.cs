@@ -28,15 +28,10 @@ namespace AppleFlyover
         List<Movie> movies;
         DateTime sunrise;
         DateTime sunset;
-        MediaPlayer mediaPlayer;
 
         public MainPage()
         {
             this.InitializeComponent();
-            mediaPlayer = new MediaPlayer();
-            mediaPlayer.MediaEnded += MediaPlayer_MediaEnded;
-            mediaPlayer.MediaFailed += MediaPlayer_MediaFailed;
-            mediaPlayerElement.SetMediaPlayer(mediaPlayer);
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
             movies = new List<Movie>();
             lastDownloaded = DateTime.MinValue;
@@ -51,7 +46,6 @@ namespace AppleFlyover
         {
             await DownloadJson(AppleUrl);
             await PlayMovies();
-            mediaPlayerElement.IsFullWindow = true;
             UpdateClock();
 
             base.OnNavigatedTo(e);
@@ -97,8 +91,8 @@ namespace AppleFlyover
             lastTimeCheck = DateTime.Now;
             Movie.TimesOfDay timeOfDay = await GetTimeOfDay();
             Movie selectedMovie = GetRandomMovie(timeOfDay);
-            mediaPlayer.Source = MediaSource.CreateFromUri(selectedMovie.Url);
-            mediaPlayer.Play();
+            mediaElement.Source = selectedMovie.Url;
+            mediaElement.Play();
         }
 
         public async Task<Movie.TimesOfDay> GetTimeOfDay()
@@ -173,12 +167,12 @@ namespace AppleFlyover
             return validList[random.Next(validList.Count)];
         }
 
-        private async void MediaPlayer_MediaEnded(MediaPlayer sender, object args)
+        private async void mediaElement_MediaEnded(object sender, RoutedEventArgs e)
         {
             await PlayMovies();
         }
 
-        private async void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+        private async void mediaElement_MediaFailed(object sender, ExceptionRoutedEventArgs e)
         {
             await PlayMovies();
         }
