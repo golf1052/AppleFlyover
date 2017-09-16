@@ -33,6 +33,7 @@ namespace AppleFlyover
         public MainPage()
         {
             this.InitializeComponent();
+            Window.Current.Activated += Current_Activated;
             mediaPlayer = new MediaPlayer();
             mediaPlayer.MediaEnded += MediaPlayer_MediaEnded;
             mediaPlayer.MediaFailed += MediaPlayer_MediaFailed;
@@ -47,23 +48,40 @@ namespace AppleFlyover
             sunset = DateTime.MinValue;
         }
 
+        private void Current_Activated(object sender, Windows.UI.Core.WindowActivatedEventArgs e)
+        {
+            if (e.WindowActivationState == Windows.UI.Core.CoreWindowActivationState.Deactivated)
+            {
+                // window deactivated
+            }
+            else
+            {
+                // window activated
+                UpdateClock();
+            }
+        }
+
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             await DownloadJson(AppleUrl);
             await PlayMovies();
-            UpdateClock();
+            UpdateClockUI();
 
             base.OnNavigatedTo(e);
         }
 
-        private async Task UpdateClock()
+        private async Task UpdateClockUI()
         {
             while (true)
             {
-                DateTime now = DateTime.Now;
-                timeBlock.Text = now.ToString("h:mm tt").ToLower();
+                UpdateClock();
                 await Task.Delay(TimeSpan.FromSeconds(15));
             }
+        }
+
+        private void UpdateClock()
+        {
+            timeBlock.Text = DateTime.Now.ToString("h:mm tt").ToLower();
         }
 
         private async Task DownloadJson(string url)
