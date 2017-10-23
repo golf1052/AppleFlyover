@@ -13,6 +13,41 @@
             <Rectangle Fill="#7F000000" d:LayoutOverrides="LeftPosition, RightPosition, TopPosition, BottomPosition"/>
             <TextBlock x:Name="timeBlock" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Margin="0" d:LayoutOverrides="Width, LeftPosition, RightPosition" HorizontalAlignment="Center" FontSize="96" Foreground="White" Padding="50,25" FontWeight="Light"/>
         </Grid>
-
+        <Border x:Name="SpotifyMediaItem" Background="#7F000000" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="50,50,0,0" Visibility="{x:Bind SpotifyHelper.Available, Mode=OneWay}">
+            <Grid Padding="32">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <Image Width="128" Height="128" Source="{x:Bind SpotifyHelper.AlbumCover, Mode=OneWay}"/>
+                <Grid Grid.Column="1" Margin="16,0,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition/>
+                        <RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="{x:Bind SpotifyHelper.TrackName, Mode=OneWay}" Foreground="White" FontSize="24" FontWeight="SemiLight"/>
+                        <TextBlock Text="{x:Bind SpotifyHelper.AlbumArtist, Mode=OneWay}" Foreground="White" FontSize="20"/>
+                    </StackPanel>
+                    <Grid Grid.Row="1" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
+                            <ColumnDefinition/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="GoBackButton" Grid.Column="0" HorizontalAlignment="Center" Width="64" Height="64" Click="GoBackButton_Click">
+                            <SymbolIcon Foreground="White" Symbol="Previous"/>
+                        </Button>
+                        <Button x:Name="PlayPauseButton" Grid.Column="1" HorizontalAlignment="Center" Width="64" Height="64" Click="PlayPauseButton_Click">
+                            <SymbolIcon Foreground="White" Symbol="{x:Bind GetCorrectSymbol(SpotifyHelper.IsPlaying), Mode=OneWay}"/>
+                        </Button>
+                        <Button x:Name="GoForwardButton" Grid.Column="2" HorizontalAlignment="Center" Width="64" Height="64" Click="GoForwardButton_Click">
+                            <SymbolIcon Foreground="White" Symbol="Next"/>
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+        <WebView x:Name="WebView" HorizontalAlignment="Center" Width="640" Margin="0,32" Visibility="Collapsed" NavigationCompleted="WebView_NavigationCompleted"/>
     </Grid>
 </Page>

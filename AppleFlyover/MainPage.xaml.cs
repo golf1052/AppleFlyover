@@ -10,6 +10,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 using Windows.Media.Core;
 using Windows.Media.Playback;
+using Windows.UI.Xaml.Media.Imaging;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -29,6 +30,7 @@ namespace AppleFlyover
         DateTime sunrise;
         DateTime sunset;
         MediaPlayer mediaPlayer;
+        public SpotifyHelper SpotifyHelper { get; private set; }
 
         public MainPage()
         {
@@ -46,6 +48,20 @@ namespace AppleFlyover
             cachedTimeOfDay = Movie.TimesOfDay.Unknown;
             sunrise = DateTime.MinValue;
             sunset = DateTime.MinValue;
+            SpotifyHelper = new SpotifyHelper();
+        }
+
+        private void Current_Activated(object sender, Windows.UI.Core.WindowActivatedEventArgs e)
+        {
+            if (e.WindowActivationState == Windows.UI.Core.CoreWindowActivationState.Deactivated)
+            {
+                // window deactivated
+            }
+            else
+            {
+                // window activated
+                UpdateClock();
+            }
         }
 
         private void Current_Activated(object sender, Windows.UI.Core.WindowActivatedEventArgs e)
@@ -65,6 +81,8 @@ namespace AppleFlyover
         {
             await DownloadJson(AppleUrl);
             await PlayMovies();
+            WebView.Visibility = Visibility.Visible;
+            WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
             UpdateClockUI();
 
             base.OnNavigatedTo(e);
@@ -198,6 +216,55 @@ namespace AppleFlyover
         private async void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
             await PlayMovies();
+        }
+
+        public Symbol GetCorrectSymbol(bool isPlaying)
+        {
+            isPlaying = SpotifyHelper.IsPlaying;
+            if (isPlaying)
+            {
+                return Symbol.Pause;
+            }
+            else
+            {
+                return Symbol.Play;
+            }
+        }
+
+        private async void GoBackButton_Click(object sender, RoutedEventArgs e)
+        {
+            await SpotifyHelper.GoBack();
+        }
+
+        private async void PlayPauseButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SpotifyHelper.IsPlaying)
+            {
+                await SpotifyHelper.Pause();
+            }
+            else
+            {
+                await SpotifyHelper.Play();
+            }
+        }
+
+        private async void GoForwardButton_Click(object sender, RoutedEventArgs e)
+        {
+            await SpotifyHelper.GoFoward();
+        }
+
+        private async void WebView_NavigationCompleted(WebView sender, WebViewNavigationCompletedEventArgs args)
+        {
+            try
+            {
+                await SpotifyHelper.ProcessRedirect(WebView.Source);
+                WebView.Visibility = Visibility.Collapsed;
+                SpotifyHelper.StartUpdate();
+            }
+            catch
+            {
+                WebView.Visibility = Visibility.Collapsed;
+            }
         }
     }
 }
