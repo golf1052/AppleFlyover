@@ -64,19 +64,6 @@ namespace AppleFlyover
             }
         }
 
-        private void Current_Activated(object sender, Windows.UI.Core.WindowActivatedEventArgs e)
-        {
-            if (e.WindowActivationState == Windows.UI.Core.CoreWindowActivationState.Deactivated)
-            {
-                // window deactivated
-            }
-            else
-            {
-                // window activated
-                UpdateClock();
-            }
-        }
-
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             await DownloadJson(AppleUrl);
