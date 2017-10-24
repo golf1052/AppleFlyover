@@ -132,6 +132,10 @@ namespace AppleFlyover
                         Available = false;
                     }
                 }
+                else
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                }
             }
         }
 

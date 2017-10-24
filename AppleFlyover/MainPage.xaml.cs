@@ -247,6 +247,7 @@ namespace AppleFlyover
                 if (WebView.Source.Host.Contains("golf1052.com"))
                 {
                     await SpotifyHelper.ProcessRedirect(WebView.Source);
+                    SpotifyHelper.CheckIfRefreshNeeded();
                     WebView.Visibility = Visibility.Collapsed;
                     SpotifyHelper.StartUpdate();
                 }
