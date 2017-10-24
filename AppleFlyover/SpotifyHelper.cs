@@ -130,6 +130,7 @@ namespace AppleFlyover
                     catch
                     {
                         Available = false;
+                        break;
                     }
                 }
                 else
