@@ -148,7 +148,11 @@ namespace AppleFlyover
                 long expiresIn = (long)responseObject["expires_in"];
                 TokenExpireTime = DateTime.Now.AddSeconds(expiresIn);
                 AccessToken = (string)responseObject["access_token"];
-                RefreshToken = (string)responseObject["refresh_token"];
+                string refreshToken = (string)responseObject["refresh_token"];
+                if (refreshToken != null)
+                {
+                    RefreshToken = refreshToken;
+                }
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
             }
             else
