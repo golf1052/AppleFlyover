@@ -164,6 +164,7 @@ namespace AppleFlyover
         public async Task StartUpdate()
         {
             AutomaticallyRefreshInfo = true;
+            bool doubleCheck = false;
             while (AutomaticallyRefreshInfo)
             {
                 bool attempting = true;
@@ -217,10 +218,25 @@ namespace AppleFlyover
                 }
                 if (!IsPlaying)
                 {
-                    AutomaticallyRefreshInfo = false;
-                    return;
+                    // when an album finishes spotify takes a second or two to queue up more songs
+                    // here we double check that playback has actually stopped.
+                    if (!doubleCheck)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(3));
+                        doubleCheck = true;
+                        continue;
+                    }
+                    else
+                    {
+                        AutomaticallyRefreshInfo = false;
+                        return;
+                    }
                 }
-                long timeRemainingMs = 15 * 1000;
+                else
+                {
+                    doubleCheck = false;
+                }
+                long timeRemainingMs = (long)TimeSpan.FromSeconds(15).TotalMilliseconds;
                 if (currentlyPlaying.Progress.HasValue)
                 {
                     timeRemainingMs = currentlyPlaying.Track.Duration - currentlyPlaying.Progress.Value;
