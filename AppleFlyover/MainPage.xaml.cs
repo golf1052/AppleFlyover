@@ -32,6 +32,7 @@ namespace AppleFlyover
         DateTime sunrise;
         DateTime sunset;
         MediaPlayer mediaPlayer;
+        private Queue<TimeSpan> lastPositions;
         public SpotifyHelper SpotifyHelper { get; private set; }
         public HueHelper HueHelper { get; private set; }
         
@@ -52,6 +53,7 @@ namespace AppleFlyover
             cachedTimeOfDay = Movie.TimesOfDay.Unknown;
             sunrise = DateTime.MinValue;
             sunset = DateTime.MinValue;
+            lastPositions = new Queue<TimeSpan>();
             SpotifyHelper = new SpotifyHelper();
             HueHelper = new HueHelper();
         }
@@ -75,8 +77,9 @@ namespace AppleFlyover
             await PlayMovies();
             WebView.Visibility = Visibility.Visible;
             WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
-            UpdateClockUI();
             await HueHelper.Setup();
+            Task updateClockTask = UpdateClockUI();
+            Task checkFrozenVideo = CheckFrozenVideo();
 
             base.OnNavigatedTo(e);
         }
@@ -93,6 +96,50 @@ namespace AppleFlyover
         private void UpdateClock()
         {
             timeBlock.Text = DateTime.Now.ToString("h:mm tt").ToLower();
+        }
+
+        /// <summary>
+        /// Sometimes for some reason the video player gets stuck. This checks that the position of the stream keeps
+        /// advancing. If it stops advancing play a new stream.
+        /// </summary>
+        /// <returns></returns>
+        private async Task CheckFrozenVideo()
+        {
+            while (true)
+            {
+                MediaPlaybackSession playbackSession = mediaPlayer.PlaybackSession;
+                TimeSpan currentPosition = playbackSession.Position;
+                if (lastPositions.Count >= 5)
+                {
+                    var items = lastPositions.ToList();
+                    bool allMatch = true;
+                    foreach (var item in items)
+                    {
+                        if (item != currentPosition)
+                        {
+                            allMatch = false;
+                            break;
+                        }
+                    }
+
+                    if (allMatch)
+                    {
+                        lastPositions.Clear();
+                        await PlayMovies();
+                    }
+                    else
+                    {
+                        lastPositions.Dequeue();
+                        lastPositions.Enqueue(currentPosition);
+                    }
+                }
+                else
+                {
+                    lastPositions.Enqueue(currentPosition);
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
         }
 
         private async Task DownloadJson(string url)
@@ -114,6 +161,8 @@ namespace AppleFlyover
 
         private async Task PlayMovies()
         {
+            mediaPlayer.Pause();
+            mediaPlayer.Source = null;
             if (DateTime.UtcNow > lastDownloaded + TimeSpan.FromDays(1))
             {
                 await DownloadJson(AppleUrl);
