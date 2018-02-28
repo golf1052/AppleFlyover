@@ -19,6 +19,7 @@ namespace AppleFlyover
         private Dictionary<string, string> lightToId;
         private Dictionary<string, string> groupToId;
         private string selectedLight;
+        // true if light, false if group
         private bool lightOrGroup;
 
         private byte lightBrightness;
@@ -74,6 +75,23 @@ namespace AppleFlyover
         public async Task SelectLight(string name)
         {
             selectedLight = name;
+            await RefreshInfo();
+        }
+
+        public async Task RefreshStatus()
+        {
+            while (true)
+            {
+                if (selectedLight != null)
+                {
+                    await RefreshInfo();
+                }
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
+        }
+
+        private async Task RefreshInfo()
+        {
             if (lightToId.ContainsKey(selectedLight))
             {
                 lightOrGroup = true;
@@ -111,12 +129,12 @@ namespace AppleFlyover
             if (lightOrGroup)
             {
                 id = lightToId[selectedLight];
-                hueClient.SendCommandAsync(command, new string[] { id });
+                Task sendCommand = hueClient.SendCommandAsync(command, new string[] { id });
             }
             else
             {
                 id = groupToId[selectedLight];
-                hueClient.SendGroupCommandAsync(command, id);
+                Task sendCommand = hueClient.SendGroupCommandAsync(command, id);
             }
         }
     }

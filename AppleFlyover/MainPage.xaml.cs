@@ -78,6 +78,7 @@ namespace AppleFlyover
             WebView.Visibility = Visibility.Visible;
             WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
             await HueHelper.Setup();
+            Task refreshLightStatus = HueHelper.RefreshStatus();
             Task updateClockTask = UpdateClockUI();
             Task checkFrozenVideo = CheckFrozenVideo();
 
