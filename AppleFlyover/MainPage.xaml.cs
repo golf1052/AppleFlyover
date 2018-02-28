@@ -11,6 +11,8 @@ using Windows.UI.Xaml.Navigation;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.UI.Xaml.Media.Imaging;
+using Windows.UI.Xaml.Media;
+using Windows.UI;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -31,6 +33,8 @@ namespace AppleFlyover
         DateTime sunset;
         MediaPlayer mediaPlayer;
         public SpotifyHelper SpotifyHelper { get; private set; }
+        public HueHelper HueHelper { get; private set; }
+        
 
         public MainPage()
         {
@@ -49,6 +53,7 @@ namespace AppleFlyover
             sunrise = DateTime.MinValue;
             sunset = DateTime.MinValue;
             SpotifyHelper = new SpotifyHelper();
+            HueHelper = new HueHelper();
         }
 
         private void Current_Activated(object sender, Windows.UI.Core.WindowActivatedEventArgs e)
@@ -71,6 +76,7 @@ namespace AppleFlyover
             WebView.Visibility = Visibility.Visible;
             WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
             UpdateClockUI();
+            await HueHelper.Setup();
 
             base.OnNavigatedTo(e);
         }
@@ -255,6 +261,39 @@ namespace AppleFlyover
             catch
             {
                 WebView.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private async void LightBrightness_ValueChanged(object sender, Windows.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+        {
+            if (HueHelper != null)
+            {
+                await HueHelper.ChangeBrightness((byte)e.NewValue);
+            }
+        }
+
+        private async void LightSwitch_Click(object sender, RoutedEventArgs e)
+        {
+            await HueHelper.ToggleLight();
+        }
+
+        private async void LightComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (e.AddedItems.Count > 0)
+            {
+                await HueHelper.SelectLight((string)e.AddedItems[0]);
+            }
+        }
+
+        public SolidColorBrush GetLightStatus(bool lightOn)
+        {
+            if (lightOn)
+            {
+                return new SolidColorBrush(Colors.White);
+            }
+            else
+            {
+                return new SolidColorBrush(Colors.Black);
             }
         }
     }
