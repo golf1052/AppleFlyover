@@ -13,6 +13,8 @@ using Windows.Media.Playback;
 using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Media;
 using Windows.UI;
+using Windows.UI.Input;
+using System.Diagnostics;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -24,6 +26,10 @@ namespace AppleFlyover
     public sealed partial class MainPage : Page
     {
         private const string AppleUrl = "http://a1.phobos.apple.com/us/r1000/000/Features/atv/AutumnResources/videos/entries.json";
+        private const string SegoeAssetFont = "Segoe MDL2 Assets";
+        private const string TemperatureText = "Temperature";
+        private const string ColorText = "Color";
+        private const string BrightnessText = "Brightness";
         private static DateTime lastDownloaded;
         private static bool haveNotPulled;
         private static DateTime lastTimeCheck;
@@ -35,7 +41,21 @@ namespace AppleFlyover
         private Queue<TimeSpan> lastPositions;
         public SpotifyHelper SpotifyHelper { get; private set; }
         public HueHelper HueHelper { get; private set; }
-        
+
+        private RadialController dial;
+        private RadialControllerConfiguration dialConfig;
+        private List<RadialControllerMenuItem> menuItems;
+        private int selectedItem = 0;
+        private bool isWindowFocused;
+
+        public enum LightMode
+        {
+            Brightness,
+            Temperature,
+            Color
+        }
+
+        private LightMode lightMode;
 
         public MainPage()
         {
@@ -56,6 +76,49 @@ namespace AppleFlyover
             lastPositions = new Queue<TimeSpan>();
             SpotifyHelper = new SpotifyHelper();
             HueHelper = new HueHelper();
+
+            lightMode = LightMode.Brightness;
+            dial = RadialController.CreateForCurrentView();
+            dial.RotationResolutionInDegrees = 5;
+            dialConfig = RadialControllerConfiguration.GetForCurrentView();
+            menuItems = new List<RadialControllerMenuItem>();
+            isWindowFocused = true;
+            dial.ButtonClicked += Dial_ButtonClicked;
+            dial.RotationChanged += Dial_RotationChanged;
+            dial.ControlAcquired += Dial_ControlAcquired;
+            dial.ControlLost += Dial_ControlLost;
+        }
+
+        private void Dial_ControlLost(RadialController sender, object args)
+        {
+            isWindowFocused = false;
+        }
+
+        private void Dial_ControlAcquired(RadialController sender, RadialControllerControlAcquiredEventArgs args)
+        {
+            isWindowFocused = true;
+        }
+
+        private async void Dial_RotationChanged(RadialController sender, RadialControllerRotationChangedEventArgs args)
+        {
+            short rotation = (short)args.RotationDeltaInDegrees;
+            if (lightMode == LightMode.Temperature)
+            {
+                await HueHelper.IncreaseDecreaseTemperature((short)-rotation);
+            }
+            else if (lightMode == LightMode.Color)
+            {
+                await HueHelper.IncreaseDecreaseColor((short)(rotation * 182));
+            }
+            else if (lightMode == LightMode.Brightness)
+            {
+                LightBrightness.Value += rotation;
+            }
+        }
+
+        private async void Dial_ButtonClicked(RadialController sender, RadialControllerButtonClickedEventArgs args)
+        {
+            await HueHelper.ToggleLight();
         }
 
         private void Current_Activated(object sender, Windows.UI.Core.WindowActivatedEventArgs e)
@@ -78,11 +141,56 @@ namespace AppleFlyover
             WebView.Visibility = Visibility.Visible;
             WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
             await HueHelper.Setup();
+            BuildDialMenu();
             Task refreshLightStatus = HueHelper.RefreshStatus();
             Task updateClockTask = UpdateClockUI();
             Task checkFrozenVideo = CheckFrozenVideo();
 
             base.OnNavigatedTo(e);
+        }
+
+        private void BuildDialMenu()
+        {
+            menuItems.Clear();
+            dial.Menu.Items.Clear();
+            RadialControllerMenuItem briItem = RadialControllerMenuItem.CreateFromFontGlyph(BrightnessText, "", SegoeAssetFont);
+            briItem.Invoked += (s, e) =>
+            {
+                lightMode = LightMode.Brightness;
+            };
+            RadialControllerMenuItem tempItem = RadialControllerMenuItem.CreateFromFontGlyph(TemperatureText, "", SegoeAssetFont);
+            tempItem.Invoked += (s, e) =>
+            {
+                lightMode = LightMode.Temperature;
+            };
+            RadialControllerMenuItem colorItem = RadialControllerMenuItem.CreateFromKnownIcon(ColorText, RadialControllerMenuKnownIcon.InkColor);
+            colorItem.Invoked += (s, e) =>
+            {
+                lightMode = LightMode.Color;
+            };
+            menuItems.Add(briItem);
+            menuItems.Add(tempItem);
+            menuItems.Add(colorItem);
+
+            for (int i = 0; i < HueHelper.Lights.Count; i++)
+            {
+                var internalI = i;
+                string light = HueHelper.Lights[i];
+                RadialControllerMenuItem lightItem = RadialControllerMenuItem.CreateFromFontGlyph(light, "", SegoeAssetFont);
+                lightItem.Invoked += (s, e) =>
+                {
+                    if (LightComboBox.Items.Count >= internalI + 1)
+                    {
+                        LightComboBox.SelectedIndex = internalI;
+                    }
+                };
+                menuItems.Add(lightItem);
+            }
+            foreach (var item in menuItems)
+            {
+                dial.Menu.Items.Add(item);
+            }
+            dialConfig.SetDefaultMenuItems(new List<RadialControllerSystemMenuItemKind>());
         }
 
         private async Task UpdateClockUI()
@@ -302,9 +410,9 @@ namespace AppleFlyover
             {
                 if (WebView.Source.Host.Contains("golf1052.com"))
                 {
+                    WebView.Visibility = Visibility.Collapsed;
                     await SpotifyHelper.ProcessRedirect(WebView.Source);
                     Task spotifyTokenRefresh = SpotifyHelper.CheckIfRefreshNeeded();
-                    WebView.Visibility = Visibility.Collapsed;
                     SpotifyHelper.StartUpdate();
                 }
             }

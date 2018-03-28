@@ -112,6 +112,24 @@ namespace AppleFlyover
         {
             LightCommand command = new LightCommand();
             command.Brightness = value;
+            command.TransitionTime = TimeSpan.Zero;
+            await SendCommand(command);
+        }
+
+        public async Task IncreaseDecreaseColor(short value)
+        {
+            LightCommand command = new LightCommand();
+            command.HueIncrement = value;
+            command.Saturation = 254;
+            command.TransitionTime = TimeSpan.Zero;
+            await SendCommand(command);
+        }
+
+        public async Task IncreaseDecreaseTemperature(short value)
+        {
+            LightCommand command = new LightCommand();
+            command.ColorTemperatureIncrement = value;
+            command.TransitionTime = TimeSpan.Zero;
             await SendCommand(command);
         }
 
