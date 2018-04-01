@@ -48,6 +48,8 @@ namespace AppleFlyover
         private int selectedItem = 0;
         private bool isWindowFocused;
 
+        private double rotationBuffer;
+
         public enum LightMode
         {
             Brightness,
@@ -77,6 +79,7 @@ namespace AppleFlyover
             SpotifyHelper = new SpotifyHelper();
             HueHelper = new HueHelper();
 
+            rotationBuffer = 0;
             lightMode = LightMode.Brightness;
             dial = RadialController.CreateForCurrentView();
             dial.RotationResolutionInDegrees = 5;
@@ -89,8 +92,9 @@ namespace AppleFlyover
             dial.ControlLost += Dial_ControlLost;
         }
 
-        private void Dial_ControlLost(RadialController sender, object args)
+        private async void Dial_ControlLost(RadialController sender, object args)
         {
+            await FlushRotation();
             isWindowFocused = false;
         }
 
@@ -99,20 +103,38 @@ namespace AppleFlyover
             isWindowFocused = true;
         }
 
-        private async void Dial_RotationChanged(RadialController sender, RadialControllerRotationChangedEventArgs args)
+        private void Dial_RotationChanged(RadialController sender, RadialControllerRotationChangedEventArgs args)
         {
-            short rotation = (short)args.RotationDeltaInDegrees;
-            if (lightMode == LightMode.Temperature)
+            rotationBuffer += args.RotationDeltaInDegrees;
+        }
+
+        private async Task ProcessRotationBuffer()
+        {
+            while (true)
             {
-                await HueHelper.IncreaseDecreaseTemperature((short)-rotation);
+                await FlushRotation();
+                await Task.Delay(TimeSpan.FromMilliseconds(500));
             }
-            else if (lightMode == LightMode.Color)
+        }
+
+        private async Task FlushRotation()
+        {
+            if (rotationBuffer != 0)
             {
-                await HueHelper.IncreaseDecreaseColor((short)(rotation * 182));
-            }
-            else if (lightMode == LightMode.Brightness)
-            {
-                LightBrightness.Value += rotation;
+                short rotation = (short)rotationBuffer;
+                if (lightMode == LightMode.Temperature)
+                {
+                    await HueHelper.IncreaseDecreaseTemperature((short)-rotation);
+                }
+                else if (lightMode == LightMode.Color)
+                {
+                    await HueHelper.IncreaseDecreaseColor((short)(rotation * 182));
+                }
+                else if (lightMode == LightMode.Brightness)
+                {
+                    LightBrightness.Value += rotation;
+                }
+                rotationBuffer = 0;
             }
         }
 
@@ -145,6 +167,7 @@ namespace AppleFlyover
             Task refreshLightStatus = HueHelper.RefreshStatus();
             Task updateClockTask = UpdateClockUI();
             Task checkFrozenVideo = CheckFrozenVideo();
+            Task processRotationBufferTask = ProcessRotationBuffer();
 
             base.OnNavigatedTo(e);
         }

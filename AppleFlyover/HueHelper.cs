@@ -12,6 +12,8 @@ namespace AppleFlyover
 {
     public class HueHelper : INotifyPropertyChanged
     {
+        private static TimeSpan TransitionTime = TimeSpan.FromMilliseconds(250);
+
         private ILocalHueClient hueClient;
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -112,7 +114,7 @@ namespace AppleFlyover
         {
             LightCommand command = new LightCommand();
             command.Brightness = value;
-            command.TransitionTime = TimeSpan.Zero;
+            command.TransitionTime = TransitionTime;
             await SendCommand(command);
         }
 
@@ -121,7 +123,7 @@ namespace AppleFlyover
             LightCommand command = new LightCommand();
             command.HueIncrement = value;
             command.Saturation = 254;
-            command.TransitionTime = TimeSpan.Zero;
+            command.TransitionTime = TransitionTime;
             await SendCommand(command);
         }
 
@@ -129,7 +131,7 @@ namespace AppleFlyover
         {
             LightCommand command = new LightCommand();
             command.ColorTemperatureIncrement = value;
-            command.TransitionTime = TimeSpan.Zero;
+            command.TransitionTime = TransitionTime;
             await SendCommand(command);
         }
 
