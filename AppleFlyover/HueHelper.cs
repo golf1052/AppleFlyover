@@ -145,16 +145,19 @@ namespace AppleFlyover
 
         private async Task SendCommand(LightCommand command)
         {
-            string id = string.Empty;
-            if (lightOrGroup)
+            if (selectedLight != null)
             {
-                id = lightToId[selectedLight];
-                Task sendCommand = hueClient.SendCommandAsync(command, new string[] { id });
-            }
-            else
-            {
-                id = groupToId[selectedLight];
-                Task sendCommand = hueClient.SendGroupCommandAsync(command, id);
+                string id = string.Empty;
+                if (lightOrGroup)
+                {
+                    id = lightToId[selectedLight];
+                    Task sendCommand = hueClient.SendCommandAsync(command, new string[] { id });
+                }
+                else
+                {
+                    id = groupToId[selectedLight];
+                    Task sendCommand = hueClient.SendGroupCommandAsync(command, id);
+                }
             }
         }
     }
