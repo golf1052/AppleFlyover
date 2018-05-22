@@ -10,8 +10,8 @@
     <Grid Background="Black">
         <MediaPlayerElement x:Name="mediaPlayerElement"/>
         <Grid VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,50,50">
-            <Rectangle Fill="#7F000000" d:LayoutOverrides="LeftPosition, RightPosition, TopPosition, BottomPosition"/>
-            <TextBlock x:Name="timeBlock" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Margin="0" d:LayoutOverrides="Width, LeftPosition, RightPosition" HorizontalAlignment="Center" FontSize="96" Foreground="White" Padding="50,25" FontWeight="Light"/>
+            <Rectangle Fill="#7F000000"/>
+            <TextBlock x:Name="timeBlock" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Margin="0" HorizontalAlignment="Center" FontSize="96" Foreground="White" Padding="50,25" FontWeight="Light"/>
         </Grid>
         <Border x:Name="SpotifyMediaItem" Background="#7F000000" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="50,50,0,0" Visibility="{x:Bind SpotifyHelper.Available, Mode=OneWay}">
             <Grid Padding="32">
@@ -24,17 +24,13 @@
                     <Grid.RowDefinitions>
                         <RowDefinition/>
                         <RowDefinition/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <StackPanel>
                         <TextBlock Text="{x:Bind SpotifyHelper.TrackName, Mode=OneWay}" Foreground="White" FontSize="24" FontWeight="SemiLight"/>
                         <TextBlock Text="{x:Bind SpotifyHelper.AlbumArtist, Mode=OneWay}" Foreground="White" FontSize="20"/>
                     </StackPanel>
-                    <Grid Grid.Row="1" Margin="0,16,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition/>
-                            <ColumnDefinition/>
-                            <ColumnDefinition/>
-                        </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Row="1" Margin="0,16,0,0" Orientation="Horizontal">
                         <Button x:Name="GoBackButton" Grid.Column="0" HorizontalAlignment="Center" Width="64" Height="64" Click="GoBackButton_Click">
                             <SymbolIcon Foreground="White" Symbol="Previous"/>
                         </Button>
@@ -44,7 +40,21 @@
                         <Button x:Name="GoForwardButton" Grid.Column="2" HorizontalAlignment="Center" Width="64" Height="64" Click="GoForwardButton_Click">
                             <SymbolIcon Foreground="White" Symbol="Next"/>
                         </Button>
-                    </Grid>
+                        <Button x:Name="AddRemoveSongButton" Width="64" Height="64" Click="AddRemoveSongButton_Click">
+                            <SymbolIcon Foreground="{x:Bind GetAddRemoveSongIconColor(SpotifyHelper.SavedTrack), Mode=OneWay}" Symbol="{x:Bind GetAddRemoveSongIconSymbol(SpotifyHelper.SavedTrack), Mode=OneWay}"/>
+                        </Button>
+                    </StackPanel>
+                    <Slider x:Name="VolumeSlider" Grid.Row="2" Maximum="100" Minimum="0" Width="250" HorizontalAlignment="Left" ValueChanged="VolumeSlider_ValueChanged" Value="{x:Bind SpotifyHelper.Volume, Mode=TwoWay}" Margin="0,4,0,0" TickFrequency="10" TickPlacement="Outside" SnapsTo="Ticks">
+                        <Slider.Resources>
+                            <ResourceDictionary>
+                                <ResourceDictionary.ThemeDictionaries>
+                                    <ResourceDictionary x:Key="Light">
+                                        <SolidColorBrush x:Key="SliderTickBarFill" Color="White"/>
+                                    </ResourceDictionary>
+                                </ResourceDictionary.ThemeDictionaries>
+                            </ResourceDictionary>
+                        </Slider.Resources>
+                    </Slider>
                 </Grid>
             </Grid>
         </Border>
@@ -57,9 +67,8 @@
                 <ComboBox x:Name="LightComboBox" MinWidth="150" HorizontalAlignment="Stretch" SelectionChanged="LightComboBox_SelectionChanged" ItemsSource="{x:Bind HueHelper.Lights, Mode=OneWay}" Margin="0,0,0,16">
                 </ComboBox>
                 <StackPanel Grid.Row="1" Orientation="Horizontal">
-                    <Slider x:Name="LightBrightness" Maximum="254" Minimum="1" Width="100" VerticalAlignment="Center" ValueChanged="LightBrightness_ValueChanged" Value="{x:Bind HueHelper.LightBrightness, Mode=OneWay}"></Slider>
-                    <Button x:Name="LightSwitch" Foreground="White" Width="64" Height="64" Margin="16,0,0,0" FontSize="20" Click="LightSwitch_Click" Background="{x:Bind GetLightStatus(HueHelper.LightOn), Mode=OneWay}">
-                    </Button>
+                    <Slider x:Name="LightBrightness" Maximum="254" Minimum="1" Width="100" VerticalAlignment="Center" ValueChanged="LightBrightness_ValueChanged" Value="{x:Bind HueHelper.LightBrightness, Mode=OneWay}"/>
+                    <Button x:Name="LightSwitch" Foreground="White" Width="64" Height="64" Margin="16,0,0,0" FontSize="20" Click="LightSwitch_Click" Background="{x:Bind GetLightStatus(HueHelper.LightOn), Mode=OneWay}"/>
                 </StackPanel>
             </Grid>
         </Border>

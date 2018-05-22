@@ -20,5 +20,8 @@ namespace AppleFlyover.Spotify
 
         [JsonProperty("item")]
         public SpotifyTrack Track { get; set; }
+
+        [JsonProperty("device")]
+        public SpotifyDevice Device { get; set; }
     }
 }

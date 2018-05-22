@@ -477,5 +477,49 @@ namespace AppleFlyover
                 return new SolidColorBrush(Colors.Black);
             }
         }
+
+        private async void AddRemoveSongButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SpotifyHelper.SavedTrack)
+            {
+                await SpotifyHelper.UnsaveCurrentTrack();
+            }
+            else
+            {
+                await SpotifyHelper.SaveCurrentTrack();
+            }
+        }
+
+        public SolidColorBrush GetAddRemoveSongIconColor(bool savedTrack)
+        {
+            if (savedTrack)
+            {
+                return new SolidColorBrush(Color.FromArgb(255, 30, 215, 96));
+            }
+            else
+            {
+                return new SolidColorBrush(Colors.White);
+            }
+        }
+
+        public Symbol GetAddRemoveSongIconSymbol(bool savedTrack)
+        {
+            if (savedTrack)
+            {
+                return Symbol.Accept;
+            }
+            else
+            {
+                return Symbol.Add;
+            }
+        }
+
+        private async void VolumeSlider_ValueChanged(object sender, Windows.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+        {
+            if (SpotifyHelper != null)
+            {
+                await SpotifyHelper.SetVolume((uint)e.NewValue);
+            }
+        }
     }
 }

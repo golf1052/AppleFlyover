@@ -18,12 +18,14 @@ namespace AppleFlyover
     public class SpotifyHelper : INotifyPropertyChanged
     {
         private const string BaseSpotifyPlayerUrl = "https://api.spotify.com/v1/me/player/";
+        private const string BaseSpotifyUserTracks = "https://api.spotify.com/v1/me/tracks/";
         public event PropertyChangedEventHandler PropertyChanged;
         private HttpClient httpClient;
         private DateTime? TokenExpireTime { get; set; }
         private string AccessToken { get; set; }
         private string RefreshToken { get; set; }
         private bool AutomaticallyRefreshInfo { get; set; }
+        private SpotifyCurrentlyPlaying CurrentlyPlaying { get; set; }
         private CancellationTokenSource cancellationTokenSource;
 
         private bool available;
@@ -61,6 +63,20 @@ namespace AppleFlyover
             private set { isPlaying = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsPlaying))); }
         }
 
+        private uint volume;
+        public uint Volume
+        {
+            get { return volume; }
+            set { volume = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Volume))); }
+        }
+
+        private bool savedTrack;
+        public bool SavedTrack
+        {
+            get { return savedTrack; }
+            private set { savedTrack = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SavedTrack))); }
+        }
+
         public SpotifyHelper()
         {
             httpClient = new HttpClient();
@@ -72,7 +88,7 @@ namespace AppleFlyover
 
         public string GetAuthorizeUrl()
         {
-            return $"https://accounts.spotify.com/authorize?client_id={Secrets.SpotifyClientId}&response_type=code&redirect_uri={Secrets.SpotifyRedirectUrl}&scope=user-read-playback-state user-modify-playback-state user-read-currently-playing";
+            return $"https://accounts.spotify.com/authorize?client_id={Secrets.SpotifyClientId}&response_type=code&redirect_uri={Secrets.SpotifyRedirectUrl}&scope=user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify";
         }
 
         public async Task ProcessRedirect(Uri url)
@@ -169,7 +185,6 @@ namespace AppleFlyover
             {
                 bool attempting = true;
                 int tries = 3;
-                SpotifyCurrentlyPlaying currentlyPlaying = null;
                 while (attempting)
                 {
                     if (tries <= 0)
@@ -178,8 +193,9 @@ namespace AppleFlyover
                         await EmptyPlayer();
                         return;
                     }
-                    currentlyPlaying = await GetCurrentInfo();
-                    if (currentlyPlaying == null)
+
+                    CurrentlyPlaying = await GetCurrentInfo();
+                    if (CurrentlyPlaying == null)
                     {
                         tries--;
                         try
@@ -200,22 +216,31 @@ namespace AppleFlyover
                         attempting = false;
                     }
                 }
-                IsPlaying = currentlyPlaying.IsPlaying;
-                TrackName = currentlyPlaying.Track.Name;
-                string albumArtist = currentlyPlaying.Track.Album.Name;
-                if (currentlyPlaying.Track.Artists.Count > 0)
+
+                if (CurrentlyPlaying.Device != null &&
+                    CurrentlyPlaying.Device.VolumePercent != null)
                 {
-                    albumArtist += $" by {currentlyPlaying.Track.Artists[0].Name}";
+                    Volume = (uint)CurrentlyPlaying.Device.VolumePercent;
                 }
-                AlbumArtist = albumArtist;
-                if (currentlyPlaying.Track.Album.Images.Count > 0)
+
+                IsPlaying = CurrentlyPlaying.IsPlaying;
+                TrackName = CurrentlyPlaying.Track.Name;
+                string albumArtist = CurrentlyPlaying.Track.Album.Name;
+                if (CurrentlyPlaying.Track.Artists.Count > 0)
                 {
-                    AlbumCover = new BitmapImage(new Uri(currentlyPlaying.Track.Album.Images[0].Url));
+                    albumArtist += $" by {CurrentlyPlaying.Track.Artists[0].Name}";
+                }
+
+                AlbumArtist = albumArtist;
+                if (CurrentlyPlaying.Track.Album.Images.Count > 0)
+                {
+                    AlbumCover = new BitmapImage(new Uri(CurrentlyPlaying.Track.Album.Images[0].Url));
                 }
                 else
                 {
                     AlbumCover = null;
                 }
+
                 if (!IsPlaying)
                 {
                     // when an album finishes spotify takes a second or two to queue up more songs
@@ -236,11 +261,15 @@ namespace AppleFlyover
                 {
                     doubleCheck = false;
                 }
+
                 long timeRemainingMs = (long)TimeSpan.FromSeconds(15).TotalMilliseconds;
-                if (currentlyPlaying.Progress.HasValue)
+                if (CurrentlyPlaying.Progress.HasValue)
                 {
-                    timeRemainingMs = currentlyPlaying.Track.Duration - currentlyPlaying.Progress.Value;
+                    timeRemainingMs = CurrentlyPlaying.Track.Duration - CurrentlyPlaying.Progress.Value;
                 }
+
+                SavedTrack = await IsTrackSaved(CurrentlyPlaying.Track.Id);
+
                 try
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(timeRemainingMs), cancellationTokenSource.Token);
@@ -268,7 +297,7 @@ namespace AppleFlyover
         {
             try
             {
-                return await MakeAuthorizedSpotifyRequest<SpotifyCurrentlyPlaying>($"{BaseSpotifyPlayerUrl}currently-playing", HttpMethod.Get);
+                return await MakeAuthorizedSpotifyRequest<SpotifyCurrentlyPlaying>($"{BaseSpotifyPlayerUrl}", HttpMethod.Get);
             }
             catch
             {
@@ -340,6 +369,36 @@ namespace AppleFlyover
             }
         }
 
+        public async Task SetVolume(uint volume)
+        {
+            await MakeAuthorizedSpotifyRequest<bool>($"{BaseSpotifyPlayerUrl}volume?volume_percent={volume}", HttpMethod.Put);
+        }
+
+        public async Task SaveCurrentTrack()
+        {
+            SavedTrack = true;
+            await MakeAuthorizedSpotifyRequest<bool>($"{BaseSpotifyUserTracks}?ids={CurrentlyPlaying.Track.Id}", HttpMethod.Put);
+        }
+
+        public async Task UnsaveCurrentTrack()
+        {
+            SavedTrack = false;
+            await MakeAuthorizedSpotifyRequest<bool>($"{BaseSpotifyUserTracks}?ids={CurrentlyPlaying.Track.Id}", HttpMethod.Delete);
+        }
+
+        private async Task<bool> IsTrackSaved(string id)
+        {
+            List<bool> response = await MakeAuthorizedSpotifyRequest<List<bool>>($"{BaseSpotifyUserTracks}contains?ids={id}", HttpMethod.Get);
+            if (response.Count > 0)
+            {
+                return response[0];
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         private async Task<T> MakeAuthorizedSpotifyRequest<T>(string url, HttpMethod method)
         {
             if (method.Method == "GET")
@@ -366,6 +425,11 @@ namespace AppleFlyover
             else if (method.Method == "POST")
             {
                 HttpResponseMessage responseMessage = await httpClient.PostAsync(url, null);
+                return default(T);
+            }
+            else if (method.Method == "DELETE")
+            {
+                HttpResponseMessage responseMessage = await httpClient.DeleteAsync(url);
                 return default(T);
             }
             else
