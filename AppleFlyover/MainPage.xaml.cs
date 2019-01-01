@@ -15,6 +15,7 @@ using Windows.UI.Xaml.Media;
 using Windows.UI;
 using Windows.UI.Input;
 using System.Diagnostics;
+using Windows.System.Profile;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -59,10 +60,33 @@ namespace AppleFlyover
 
         private LightMode lightMode;
 
+        public enum Device
+        {
+            Desktop,
+            Mobile,
+            Other
+        }
+        private Device device;
+
         public MainPage()
         {
             this.InitializeComponent();
             Window.Current.Activated += Current_Activated;
+
+            string deviceFamily = AnalyticsInfo.VersionInfo.DeviceFamily;
+            if (deviceFamily.Contains("Mobile"))
+            {
+                device = Device.Mobile;
+            }
+            else if (deviceFamily.Contains("Desktop"))
+            {
+                device = Device.Desktop;
+            }
+            else
+            {
+                device = Device.Other;
+            }
+
             mediaPlayer = new MediaPlayer();
             mediaPlayer.MediaEnded += MediaPlayer_MediaEnded;
             mediaPlayer.MediaFailed += MediaPlayer_MediaFailed;
@@ -81,15 +105,20 @@ namespace AppleFlyover
 
             rotationBuffer = 0;
             lightMode = LightMode.Brightness;
-            dial = RadialController.CreateForCurrentView();
-            dial.RotationResolutionInDegrees = 5;
-            dialConfig = RadialControllerConfiguration.GetForCurrentView();
-            menuItems = new List<RadialControllerMenuItem>();
-            isWindowFocused = true;
-            dial.ButtonClicked += Dial_ButtonClicked;
-            dial.RotationChanged += Dial_RotationChanged;
-            dial.ControlAcquired += Dial_ControlAcquired;
-            dial.ControlLost += Dial_ControlLost;
+            
+            if (device == Device.Desktop)
+            {
+                dial = RadialController.CreateForCurrentView();
+                dial.RotationResolutionInDegrees = 5;
+                dial.UseAutomaticHapticFeedback = false;
+                dialConfig = RadialControllerConfiguration.GetForCurrentView();
+                menuItems = new List<RadialControllerMenuItem>();
+                isWindowFocused = true;
+                dial.ButtonClicked += Dial_ButtonClicked;
+                dial.RotationChanged += Dial_RotationChanged;
+                dial.ControlAcquired += Dial_ControlAcquired;
+                dial.ControlLost += Dial_ControlLost;
+            }
         }
 
         private async void Dial_ControlLost(RadialController sender, object args)
@@ -163,7 +192,11 @@ namespace AppleFlyover
             WebView.Visibility = Visibility.Visible;
             WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
             await HueHelper.Setup();
-            BuildDialMenu();
+
+            if (device == Device.Desktop)
+            {
+                BuildDialMenu();
+            }
             Task refreshLightStatus = HueHelper.RefreshStatus();
             Task updateClockTask = UpdateClockUI();
             Task checkFrozenVideo = CheckFrozenVideo();

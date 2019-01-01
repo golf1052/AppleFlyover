@@ -65,6 +65,10 @@ namespace AppleFlyover
             foreach (var group in groups)
             {
                 var name = group.Name;
+                if (name.Contains("Group for"))
+                {
+                    continue;
+                }
                 if (Lights.Contains(name))
                 {
                     name = $"{name} (group)";

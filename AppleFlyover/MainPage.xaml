@@ -8,18 +8,44 @@
     mc:Ignorable="d">
 
     <Grid Background="Black">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState>
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="720"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="ClockGrid.VerticalAlignment" Value="Bottom"/>
+                        <Setter Target="ClockGrid.HorizontalAlignment" Value="Right"/>
+                        <Setter Target="ClockGrid.Margin" Value="0,0,50,50"/>
+                        <Setter Target="timeBlock.FontSize" Value="96"/>
+                        <Setter Target="timeBlock.Padding" Value="50,25"/>
+                        <Setter Target="SpotifyMediaItem.Margin" Value="50,50,0,0"/>
+                        <Setter Target="SpotifyMediaItem.HorizontalAlignment" Value="Left"/>
+                        <Setter Target="SpotifyMediaGrid.Padding" Value="32"/>
+                        <Setter Target="AlbumImage.Width" Value="128"/>
+                        <Setter Target="AlbumImage.Height" Value="128"/>
+                        <Setter Target="LightControlBorder.HorizontalAlignment" Value="Left"/>
+                        <Setter Target="LightControlBorder.Margin" Value="50,0,0,50"/>
+                        <Setter Target="LightControlGrid.Padding" Value="32"/>
+                        <Setter Target="TrackName.FontSize" Value="24"/>
+                        <Setter Target="AlbumArtist.FontSize" Value="20"/>
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
         <MediaPlayerElement x:Name="mediaPlayerElement"/>
-        <Grid VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,50,50">
+        <Grid x:Name="ClockGrid" VerticalAlignment="Bottom" HorizontalAlignment="Center">
             <Rectangle Fill="#7F000000"/>
-            <TextBlock x:Name="timeBlock" TextWrapping="Wrap" Text="" VerticalAlignment="Center" Margin="0" HorizontalAlignment="Center" FontSize="96" Foreground="White" Padding="50,25" FontWeight="Light"/>
+            <TextBlock x:Name="timeBlock" TextWrapping="Wrap" Text="88:88" VerticalAlignment="Center" Margin="0" HorizontalAlignment="Center" FontSize="46" Foreground="White" Padding="50,4" FontWeight="Light"/>
         </Grid>
-        <Border x:Name="SpotifyMediaItem" Background="#7F000000" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="50,50,0,0" Visibility="{x:Bind SpotifyHelper.Available, Mode=OneWay}">
-            <Grid Padding="32">
+        <Border x:Name="SpotifyMediaItem" Background="#7F000000" VerticalAlignment="Top" HorizontalAlignment="Center" Visibility="{x:Bind SpotifyHelper.Available, Mode=OneWay}">
+            <Grid x:Name="SpotifyMediaGrid" Padding="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition/>
                 </Grid.ColumnDefinitions>
-                <Image Width="128" Height="128" Source="{x:Bind SpotifyHelper.AlbumCover, Mode=OneWay}"/>
+                <Image x:Name="AlbumImage" Width="64" Height="64" Source="{x:Bind SpotifyHelper.AlbumCover, Mode=OneWay}"/>
                 <Grid Grid.Column="1" Margin="16,0,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition/>
@@ -27,8 +53,8 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <StackPanel>
-                        <TextBlock Text="{x:Bind SpotifyHelper.TrackName, Mode=OneWay}" Foreground="White" FontSize="24" FontWeight="SemiLight"/>
-                        <TextBlock Text="{x:Bind SpotifyHelper.AlbumArtist, Mode=OneWay}" Foreground="White" FontSize="20"/>
+                        <TextBlock x:Name="TrackName" Text="{x:Bind SpotifyHelper.TrackName, Mode=OneWay}" Foreground="White" FontSize="15" FontWeight="SemiLight"/>
+                        <TextBlock x:Name="AlbumArtist" Text="{x:Bind SpotifyHelper.AlbumArtist, Mode=OneWay}" Foreground="White" FontSize="12"/>
                     </StackPanel>
                     <StackPanel Grid.Row="1" Margin="0,16,0,0" Orientation="Horizontal">
                         <Button x:Name="GoBackButton" Grid.Column="0" HorizontalAlignment="Center" Width="64" Height="64" Click="GoBackButton_Click">
@@ -58,8 +84,8 @@
                 </Grid>
             </Grid>
         </Border>
-        <Border Background="#7F000000" HorizontalAlignment="Left" Margin="50,0,0,50" VerticalAlignment="Bottom">
-            <Grid Padding="32">
+        <Border x:Name="LightControlBorder" Background="#7F000000" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,70">
+            <Grid x:Name="LightControlGrid" Padding="8">
                 <Grid.RowDefinitions>
                     <RowDefinition/>
                     <RowDefinition/>
@@ -68,7 +94,7 @@
                 </ComboBox>
                 <StackPanel Grid.Row="1" Orientation="Horizontal">
                     <Slider x:Name="LightBrightness" Maximum="254" Minimum="1" Width="100" VerticalAlignment="Center" ValueChanged="LightBrightness_ValueChanged" Value="{x:Bind HueHelper.LightBrightness, Mode=OneWay}"/>
-                    <Button x:Name="LightSwitch" Foreground="White" Width="64" Height="64" Margin="16,0,0,0" FontSize="20" Click="LightSwitch_Click" Background="{x:Bind GetLightStatus(HueHelper.LightOn), Mode=OneWay}"/>
+                    <Button x:Name="LightSwitch" Foreground="White" Width="64" Height="64" Margin="16,0,0,0" FontSize="20" Click="LightSwitch_Click" Background="{x:Bind GetLightStatus(HueHelper.LightOn), Mode=OneWay}" BorderBrush="White" BorderThickness="1"/>
                 </StackPanel>
             </Grid>
         </Border>
