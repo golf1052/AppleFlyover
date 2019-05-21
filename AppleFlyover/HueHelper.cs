@@ -23,6 +23,9 @@ namespace AppleFlyover
         private string selectedLight;
         // true if light, false if group
         private bool lightOrGroup;
+        private byte? storedBrightness;
+        private TimeSpan sendCommandDelay;
+        private Task sendBrightnessTask;
 
         private byte lightBrightness;
         public byte LightBrightness
@@ -43,6 +46,7 @@ namespace AppleFlyover
             Lights = new ObservableCollection<string>();
             lightToId = new Dictionary<string, string>();
             groupToId = new Dictionary<string, string>();
+            sendCommandDelay = TimeSpan.FromMilliseconds(500);
         }
 
         public async Task Setup()
@@ -115,6 +119,32 @@ namespace AppleFlyover
         }
 
         public async Task ChangeBrightness(byte value)
+        {
+            storedBrightness = value;
+            if (sendBrightnessTask == null)
+            {
+                sendBrightnessTask = SendBrightness();
+                await sendBrightnessTask;
+                sendBrightnessTask = null;
+            }
+        }
+
+        private async Task SendBrightness()
+        {
+            do
+            {
+                if (storedBrightness != null)
+                {
+                    var currentBrightness = storedBrightness.Value;
+                    storedBrightness = null;
+                    await UpdateBrightness(currentBrightness);
+                    await Task.Delay(sendCommandDelay);
+                }
+            }
+            while (storedBrightness != null);
+        }
+
+        private async Task UpdateBrightness(byte value)
         {
             LightCommand command = new LightCommand();
             command.Brightness = value;
