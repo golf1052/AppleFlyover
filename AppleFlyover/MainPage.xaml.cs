@@ -16,6 +16,7 @@ using Windows.UI;
 using Windows.UI.Input;
 using System.Diagnostics;
 using Windows.System.Profile;
+using Windows.ApplicationModel.Core;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -181,7 +182,7 @@ namespace AppleFlyover
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             await appleMovieDownloader.LoadMovies();
-            await PlayMovies();
+            PlayMovies();
             WebView.Visibility = Visibility.Visible;
             WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
             await HueHelper.Setup();
@@ -283,7 +284,7 @@ namespace AppleFlyover
                     if (allMatch)
                     {
                         lastPositions.Clear();
-                        await PlayMovies();
+                        PlayMovies();
                     }
                     else
                     {
@@ -296,16 +297,21 @@ namespace AppleFlyover
                     lastPositions.Enqueue(currentPosition);
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(2));
             }
         }
 
-        private async Task PlayMovies()
+        private void PlayMovies()
         {
             mediaPlayer.Pause();
             mediaPlayer.Source = null;
             Movie selectedMovie = GetRandomMovie();
-            labelBlock.Text = selectedMovie.Label;
+            // need to update specifically on the UI thread because this gets called from async methods
+            _ = CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
+                () =>
+                {
+                    labelBlock.Text = selectedMovie.Label;
+                });
             mediaPlayer.Source = MediaSource.CreateFromUri(selectedMovie.Url);
             mediaPlayer.Play();
         }
@@ -328,14 +334,14 @@ namespace AppleFlyover
             return appleMovieDownloader.Movies[random.Next(appleMovieDownloader.Movies.Count)];
         }
 
-        private async void MediaPlayer_MediaEnded(MediaPlayer sender, object args)
+        private void MediaPlayer_MediaEnded(MediaPlayer sender, object args)
         {
-            await PlayMovies();
+            PlayMovies();
         }
 
-        private async void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+        private void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
-            await PlayMovies();
+            PlayMovies();
         }
 
         public Symbol GetCorrectSymbol(bool isPlaying)
