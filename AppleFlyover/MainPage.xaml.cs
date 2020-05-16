@@ -26,16 +26,10 @@ namespace AppleFlyover
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        private const string AppleUrl = "http://a1.phobos.apple.com/us/r1000/000/Features/atv/AutumnResources/videos/entries.json";
         private const string SegoeAssetFont = "Segoe MDL2 Assets";
         private const string TemperatureText = "Temperature";
         private const string ColorText = "Color";
         private const string BrightnessText = "Brightness";
-        private static DateTime lastDownloaded;
-        private static bool haveNotPulled;
-        private static DateTime lastTimeCheck;
-        private static Movie.TimesOfDay cachedTimeOfDay;
-        List<Movie> movies;
         DateTime sunrise;
         DateTime sunset;
         MediaPlayer mediaPlayer;
@@ -43,6 +37,8 @@ namespace AppleFlyover
         public SpotifyHelper SpotifyHelper { get; private set; }
         public HueHelper HueHelper { get; private set; }
 
+        private HttpClient httpClient;
+        private AppleMovieDownloader appleMovieDownloader;
         private RadialController dial;
         private RadialControllerConfiguration dialConfig;
         private List<RadialControllerMenuItem> menuItems;
@@ -92,11 +88,8 @@ namespace AppleFlyover
             mediaPlayer.MediaFailed += MediaPlayer_MediaFailed;
             mediaPlayerElement.SetMediaPlayer(mediaPlayer);
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
-            movies = new List<Movie>();
-            lastDownloaded = DateTime.MinValue;
-            haveNotPulled = true;
-            lastTimeCheck = DateTime.MinValue;
-            cachedTimeOfDay = Movie.TimesOfDay.Unknown;
+            httpClient = new HttpClient();
+            appleMovieDownloader = new AppleMovieDownloader(httpClient);
             sunrise = DateTime.MinValue;
             sunset = DateTime.MinValue;
             lastPositions = new Queue<TimeSpan>();
@@ -187,7 +180,7 @@ namespace AppleFlyover
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
-            await DownloadJson(AppleUrl);
+            await appleMovieDownloader.LoadMovies();
             await PlayMovies();
             WebView.Visibility = Visibility.Visible;
             WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
@@ -307,85 +300,14 @@ namespace AppleFlyover
             }
         }
 
-        private async Task DownloadJson(string url)
-        {
-            movies.Clear();
-            HttpClient client = new HttpClient();
-            HttpResponseMessage response = await client.GetAsync(url);
-            JArray a = JArray.Parse(await response.Content.ReadAsStringAsync());
-            foreach (JObject o in a)
-            {
-                JArray assets = (JArray)o["assets"];
-                foreach (JObject movieO in assets)
-                {
-                    movies.Add(new Movie(movieO));
-                }
-            }
-            lastDownloaded = DateTime.UtcNow;
-        }
-
         private async Task PlayMovies()
         {
             mediaPlayer.Pause();
             mediaPlayer.Source = null;
-            if (DateTime.UtcNow > lastDownloaded + TimeSpan.FromDays(1))
-            {
-                await DownloadJson(AppleUrl);
-            }
-            if (lastTimeCheck < Midnight())
-            {
-                haveNotPulled = true;
-            }
-            lastTimeCheck = DateTime.Now;
-            Movie.TimesOfDay timeOfDay = await GetTimeOfDay();
-            Movie selectedMovie = GetRandomMovie(timeOfDay);
+            Movie selectedMovie = GetRandomMovie();
+            labelBlock.Text = selectedMovie.Label;
             mediaPlayer.Source = MediaSource.CreateFromUri(selectedMovie.Url);
             mediaPlayer.Play();
-        }
-
-        public async Task<Movie.TimesOfDay> GetTimeOfDay()
-        {
-            if (haveNotPulled)
-            {
-                HttpClient client = new HttpClient();
-                HttpResponseMessage response = await client.GetAsync(string.Format("http://api.wunderground.com/api/{0}/astronomy/q/autoip.json", Secrets.ApiKey));
-                haveNotPulled = false;
-                JObject o = null;
-                try
-                {
-                    o = JObject.Parse(await response.Content.ReadAsStringAsync());
-                    sunrise = DateTimeHelper(int.Parse((string)o["moon_phase"]["sunrise"]["hour"]), int.Parse((string)o["moon_phase"]["sunrise"]["minute"]));
-                    sunset = DateTimeHelper(int.Parse((string)o["moon_phase"]["sunset"]["hour"]), int.Parse((string)o["moon_phase"]["sunset"]["minute"]));
-                    DateTime now = DateTime.Now;
-                    if (sunrise < now && now < sunset)
-                    {
-                        cachedTimeOfDay = Movie.TimesOfDay.Day;
-                    }
-                    else
-                    {
-                        cachedTimeOfDay = Movie.TimesOfDay.Night;
-                    }
-                    return cachedTimeOfDay;
-                }
-                catch
-                {
-                    cachedTimeOfDay = Movie.TimesOfDay.Day;
-                    return cachedTimeOfDay;
-                }
-            }
-            else
-            {
-                DateTime now = DateTime.Now;
-                if (sunrise < now && now < sunset)
-                {
-                    cachedTimeOfDay = Movie.TimesOfDay.Day;
-                }
-                else
-                {
-                    cachedTimeOfDay = Movie.TimesOfDay.Night;
-                }
-                return cachedTimeOfDay;
-            }
         }
 
         private DateTime DateTimeHelper(int hour, int minute)
@@ -400,19 +322,10 @@ namespace AppleFlyover
             return new DateTime(now.Year, now.Month, now.Day);
         }
 
-        private Movie GetRandomMovie(Movie.TimesOfDay timeOfDay)
+        private Movie GetRandomMovie()
         {
-            List<Movie> validList = new List<Movie>();
-            foreach (Movie movie in movies)
-            {
-                if (movie.TimeOfDay == timeOfDay)
-                {
-                    validList.Add(movie);
-                }
-            }
-
             Random random = new Random();
-            return validList[random.Next(validList.Count)];
+            return appleMovieDownloader.Movies[random.Next(appleMovieDownloader.Movies.Count)];
         }
 
         private async void MediaPlayer_MediaEnded(MediaPlayer sender, object args)

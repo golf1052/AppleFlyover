@@ -30,11 +30,16 @@
                         <Setter Target="LightControlGrid.Padding" Value="32"/>
                         <Setter Target="TrackName.FontSize" Value="24"/>
                         <Setter Target="AlbumArtist.FontSize" Value="20"/>
+                        <Setter Target="LabelGrid.Margin" Value="0,0,0,32"/>
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
         <MediaPlayerElement x:Name="mediaPlayerElement"/>
+        <Grid x:Name="LabelGrid" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,200">
+            <Rectangle Fill="#7F000000"/>
+            <TextBlock x:Name="labelBlock" Text="Somewhere on Earth" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="16,8"/>
+        </Grid>
         <Grid x:Name="ClockGrid" VerticalAlignment="Bottom" HorizontalAlignment="Center">
             <Rectangle Fill="#7F000000"/>
             <TextBlock x:Name="timeBlock" TextWrapping="Wrap" Text="88:88" VerticalAlignment="Center" Margin="0" HorizontalAlignment="Center" FontSize="46" Foreground="White" Padding="50,4" FontWeight="Light"/>
