@@ -27,6 +27,11 @@ namespace AppleFlyover
         private TimeSpan sendCommandDelay;
         private Task sendBrightnessTask;
 
+        /// <summary>
+        /// Flag to signify that the brightness was updated externally and we don't need to send the brightness back to the light
+        /// </summary>
+        private bool updatingBrightnessFromExternal;
+
         private byte lightBrightness;
         public byte LightBrightness
         {
@@ -113,6 +118,7 @@ namespace AppleFlyover
             {
                 lightOrGroup = false;
                 var group = await hueClient.GetGroupAsync(groupToId[selectedLight]);
+                updatingBrightnessFromExternal = true;
                 LightBrightness = group.Action.Brightness;
                 LightOn = group.State.AnyOn.Value;
             }
@@ -137,8 +143,15 @@ namespace AppleFlyover
                 {
                     var currentBrightness = storedBrightness.Value;
                     storedBrightness = null;
-                    await UpdateBrightness(currentBrightness);
-                    await Task.Delay(sendCommandDelay);
+                    if (!updatingBrightnessFromExternal)
+                    {
+                        await UpdateBrightness(currentBrightness);
+                        await Task.Delay(sendCommandDelay);
+                    }
+                    else
+                    {
+                        updatingBrightnessFromExternal = false;
+                    }
                 }
             }
             while (storedBrightness != null);
