@@ -22,7 +22,7 @@
     <AppxBundle>Always</AppxBundle>
     <AppxBundlePlatforms>x86|x64|arm</AppxBundlePlatforms>
     <RuntimeIdentifiers>win10-arm;win10-arm-aot;win10-x86;win10-x86-aot;win10-x64;win10-x64-aot</RuntimeIdentifiers>
-    <PackageCertificateThumbprint>5BB217AD562C349329DBB4E7DEAA7B5E2747A1F5</PackageCertificateThumbprint>
+    <PackageCertificateThumbprint>CC41420240DC2F9D2FB5272E51379A371CD01DFA</PackageCertificateThumbprint>
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <AppInstallerUri>https://golf1052.com/apps/AppleFlyover</AppInstallerUri>
     <AppInstallerUpdateFrequency>1</AppInstallerUpdateFrequency>
@@ -104,6 +104,15 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AirQuality\AirNow\AirNowAPI.cs" />
+    <Compile Include="AirQuality\AirNow\Objects\Category.cs" />
+    <Compile Include="AirQuality\AirNow\Objects\Observation.cs" />
+    <Compile Include="AirQuality\AirNow\Objects\Response.cs" />
+    <Compile Include="AirQuality\AirQualityHelper.cs" />
+    <Compile Include="AirQuality\AQI.cs" />
+    <Compile Include="AirQuality\Category.cs" />
+    <Compile Include="AirQuality\Index.cs" />
+    <Compile Include="AirQuality\WAQA.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
@@ -151,6 +160,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Flurl">
+      <Version>2.8.2</Version>
+    </PackageReference>
     <PackageReference Include="Microsoft.ApplicationInsights">
       <Version>2.6.1</Version>
     </PackageReference>
@@ -167,7 +179,7 @@
       <Version>11.0.2</Version>
     </PackageReference>
     <PackageReference Include="Q42.HueApi">
-      <Version>3.6.3</Version>
+      <Version>3.7.2</Version>
     </PackageReference>
     <PackageReference Include="System.IO.Pipelines">
       <Version>4.7.2</Version>

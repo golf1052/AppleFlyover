@@ -15,9 +15,9 @@
                         <AdaptiveTrigger MinWindowWidth="720"/>
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="ClockGrid.VerticalAlignment" Value="Bottom"/>
-                        <Setter Target="ClockGrid.HorizontalAlignment" Value="Right"/>
-                        <Setter Target="ClockGrid.Margin" Value="0,0,50,50"/>
+                        <Setter Target="InfoGrid.VerticalAlignment" Value="Bottom"/>
+                        <Setter Target="InfoGrid.HorizontalAlignment" Value="Right"/>
+                        <Setter Target="InfoGrid.Margin" Value="0,0,50,50"/>
                         <Setter Target="timeBlock.FontSize" Value="96"/>
                         <Setter Target="timeBlock.Padding" Value="50,25"/>
                         <Setter Target="SpotifyMediaItem.Margin" Value="50,50,0,0"/>
@@ -40,10 +40,16 @@
             <Rectangle Fill="#7F000000"/>
             <TextBlock x:Name="labelBlock" Text="Somewhere on Earth" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="16,8"/>
         </Grid>
-        <Grid x:Name="ClockGrid" VerticalAlignment="Bottom" HorizontalAlignment="Center">
-            <Rectangle Fill="#7F000000"/>
-            <TextBlock x:Name="timeBlock" TextWrapping="Wrap" Text="88:88" VerticalAlignment="Center" Margin="0" HorizontalAlignment="Center" FontSize="46" Foreground="White" Padding="50,4" FontWeight="Light"/>
-        </Grid>
+        <StackPanel x:Name="InfoGrid" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+            <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Rectangle Fill="{x:Bind AirQualityHelper.Brush, Mode=OneWay}"/>
+                <TextBlock x:Name="airQualityBlock" Text="{x:Bind AirQualityHelper.Text, Mode=OneWay}" VerticalAlignment="Center" FontSize="46" Foreground="White" FontWeight="Light" Padding="16,4"/>
+            </Grid>
+            <Grid x:Name="ClockGrid" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+                <Rectangle Fill="#7F000000"/>
+                <TextBlock x:Name="timeBlock" TextWrapping="Wrap" Text="88:88" VerticalAlignment="Center" Margin="0" HorizontalAlignment="Center" FontSize="46" Foreground="White" Padding="50,4" FontWeight="Light"/>
+            </Grid>
+        </StackPanel>
         <Border x:Name="SpotifyMediaItem" Background="#7F000000" VerticalAlignment="Top" HorizontalAlignment="Center" Visibility="{x:Bind SpotifyHelper.Available, Mode=OneWay}">
             <Grid x:Name="SpotifyMediaGrid" Padding="8">
                 <Grid.ColumnDefinitions>

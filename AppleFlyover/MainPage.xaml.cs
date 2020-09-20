@@ -17,6 +17,8 @@ using Windows.UI.Input;
 using System.Diagnostics;
 using Windows.System.Profile;
 using Windows.ApplicationModel.Core;
+using Windows.Devices.Geolocation;
+using AppleFlyover.AirQuality;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -37,6 +39,7 @@ namespace AppleFlyover
         private Queue<TimeSpan> lastPositions;
         public SpotifyHelper SpotifyHelper { get; private set; }
         public HueHelper HueHelper { get; private set; }
+        public AirQualityHelper AirQualityHelper { get; private set; }
 
         private HttpClient httpClient;
         private AppleMovieDownloader appleMovieDownloader;
@@ -96,6 +99,7 @@ namespace AppleFlyover
             lastPositions = new Queue<TimeSpan>();
             SpotifyHelper = new SpotifyHelper();
             HueHelper = new HueHelper();
+            AirQualityHelper = new AirQualityHelper();
 
             rotationBuffer = 0;
             lightMode = LightMode.Brightness;
@@ -181,6 +185,7 @@ namespace AppleFlyover
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
+            GeolocationAccessStatus accessStatus = await Geolocator.RequestAccessAsync();
             await appleMovieDownloader.LoadMovies();
             PlayMovies();
             WebView.Visibility = Visibility.Visible;
@@ -195,6 +200,7 @@ namespace AppleFlyover
             Task updateClockTask = UpdateClockUI();
             Task checkFrozenVideo = CheckFrozenVideo();
             Task processRotationBufferTask = ProcessRotationBuffer();
+            _ = AirQualityHelper.Run();
 
             base.OnNavigatedTo(e);
         }
