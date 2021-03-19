@@ -31,42 +31,49 @@ namespace AppleFlyover
         public async Task LoadMovies()
         {
             // Get tvOS10 movies
-            HttpResponseMessage response = await httpClient.GetAsync(Apple10Url);
-            JArray a = JArray.Parse(await response.Content.ReadAsStringAsync());
-            foreach (JObject o in a)
+
+            try
             {
-                JArray assets = (JArray)o["assets"];
-                foreach (JObject movieO in assets)
+                HttpResponseMessage response = await httpClient.GetAsync(Apple10Url);
+                JArray a = JArray.Parse(await response.Content.ReadAsStringAsync());
+                foreach (JObject o in a)
                 {
-                    Movie movie = new Movie(new Uri((string)movieO["url"]), (string)movieO["accessibilityLabel"]);
+                    JArray assets = (JArray)o["assets"];
+                    foreach (JObject movieO in assets)
+                    {
+                        Movie movie = new Movie(new Uri((string)movieO["url"]), (string)movieO["accessibilityLabel"]);
+                        Movies.Add(movie);
+                    }
+                }
+
+                // Get tvOS12 movies
+                response = await httpClient.GetAsync(Apple12Url);
+                JObject tv12MoviesO = ExtractTar(await response.Content.ReadAsStreamAsync());
+                foreach (JObject o in (JArray)tv12MoviesO["assets"])
+                {
+                    string url = (string)o["url-1080-H264"];
+                    url = url.Replace("\\", "");
+                    // Domain has misconfigured cert so downgrade to http
+                    url = url.Replace("https", "http");
+                    Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"]);
+                    Movies.Add(movie);
+                }
+
+                // Get tvOS13 movies
+                response = await httpClient.GetAsync(Apple13Url);
+                JObject tv13MoviesO = ExtractTar(await response.Content.ReadAsStreamAsync());
+                foreach (JObject o in (JArray)tv13MoviesO["assets"])
+                {
+                    string url = (string)o["url-1080-H264"];
+                    url = url.Replace("\\", "");
+                    // Domain has misconfigured cert so downgrade to http
+                    url = url.Replace("https", "http");
+                    Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"]);
                     Movies.Add(movie);
                 }
             }
-
-            // Get tvOS12 movies
-            response = await httpClient.GetAsync(Apple12Url);
-            JObject tv12MoviesO = ExtractTar(await response.Content.ReadAsStreamAsync());
-            foreach (JObject o in (JArray)tv12MoviesO["assets"])
+            catch (HttpRequestException)
             {
-                string url = (string)o["url-1080-H264"];
-                url = url.Replace("\\", "");
-                // Domain has misconfigured cert so downgrade to http
-                url = url.Replace("https", "http");
-                Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"]);
-                Movies.Add(movie);
-            }
-
-            // Get tvOS13 movies
-            response = await httpClient.GetAsync(Apple13Url);
-            JObject tv13MoviesO = ExtractTar(await response.Content.ReadAsStreamAsync());
-            foreach (JObject o in (JArray)tv13MoviesO["assets"])
-            {
-                string url = (string)o["url-1080-H264"];
-                url = url.Replace("\\", "");
-                // Domain has misconfigured cert so downgrade to http
-                url = url.Replace("https", "http");
-                Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"]);
-                Movies.Add(movie);
             }
         }
 

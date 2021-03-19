@@ -19,6 +19,7 @@ using Windows.System.Profile;
 using Windows.ApplicationModel.Core;
 using Windows.Devices.Geolocation;
 using AppleFlyover.AirQuality;
+using Windows.Networking.Connectivity;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -33,6 +34,7 @@ namespace AppleFlyover
         private const string TemperatureText = "Temperature";
         private const string ColorText = "Color";
         private const string BrightnessText = "Brightness";
+
         DateTime sunrise;
         DateTime sunset;
         MediaPlayer mediaPlayer;
@@ -48,6 +50,9 @@ namespace AppleFlyover
         private List<RadialControllerMenuItem> menuItems;
         private int selectedItem = 0;
         private bool isWindowFocused;
+
+        private NetworkConnectivityLevel currentNetworkConnectivityLevel;
+        private bool ranOnLaunchInternetTasks;
 
         private double rotationBuffer;
 
@@ -71,7 +76,12 @@ namespace AppleFlyover
         public MainPage()
         {
             this.InitializeComponent();
+
+            ranOnLaunchInternetTasks = false;
+            currentNetworkConnectivityLevel = NetworkInformation.GetInternetConnectionProfile().GetNetworkConnectivityLevel();
             Window.Current.Activated += Current_Activated;
+
+            NetworkInformation.NetworkStatusChanged += NetworkInformation_NetworkStatusChanged;
 
             string deviceFamily = AnalyticsInfo.VersionInfo.DeviceFamily;
             if (deviceFamily.Contains("Mobile"))
@@ -116,6 +126,19 @@ namespace AppleFlyover
                 dial.RotationChanged += Dial_RotationChanged;
                 dial.ControlAcquired += Dial_ControlAcquired;
                 dial.ControlLost += Dial_ControlLost;
+            }
+        }
+
+        private async void NetworkInformation_NetworkStatusChanged(object sender)
+        {
+            currentNetworkConnectivityLevel = NetworkInformation.GetInternetConnectionProfile().GetNetworkConnectivityLevel();
+
+            if (currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess)
+            {
+                if (!ranOnLaunchInternetTasks)
+                {
+                    await RunOnLaunchInternetTasks();
+                }
             }
         }
 
@@ -186,10 +209,7 @@ namespace AppleFlyover
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             GeolocationAccessStatus accessStatus = await Geolocator.RequestAccessAsync();
-            await appleMovieDownloader.LoadMovies();
-            PlayMovies();
-            WebView.Visibility = Visibility.Visible;
-            WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
+            await RunOnLaunchInternetTasks();
             await HueHelper.Setup();
 
             if (device == Device.Desktop)
@@ -203,6 +223,22 @@ namespace AppleFlyover
             _ = AirQualityHelper.Run();
 
             base.OnNavigatedTo(e);
+        }
+
+        /// <summary>
+        /// Runs everything that is needed on app startup if there is internet access
+        /// </summary>
+        /// <returns></returns>
+        private async Task RunOnLaunchInternetTasks()
+        {
+            if (currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess && !ranOnLaunchInternetTasks)
+            {
+                await appleMovieDownloader.LoadMovies();
+                PlayMovies();
+                WebView.Visibility = Visibility.Visible;
+                WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
+                ranOnLaunchInternetTasks = true;
+            }
         }
 
         private void BuildDialMenu()
@@ -311,15 +347,18 @@ namespace AppleFlyover
         {
             mediaPlayer.Pause();
             mediaPlayer.Source = null;
-            Movie selectedMovie = GetRandomMovie();
-            // need to update specifically on the UI thread because this gets called from async methods
-            _ = CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-                () =>
-                {
-                    labelBlock.Text = selectedMovie.Label;
-                });
-            mediaPlayer.Source = MediaSource.CreateFromUri(selectedMovie.Url);
-            mediaPlayer.Play();
+            if (currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess)
+            {
+                Movie selectedMovie = GetRandomMovie();
+                // need to update specifically on the UI thread because this gets called from async methods
+                _ = CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
+                    () =>
+                    {
+                        labelBlock.Text = selectedMovie.Label;
+                    });
+                mediaPlayer.Source = MediaSource.CreateFromUri(selectedMovie.Url);
+                mediaPlayer.Play();
+            }
         }
 
         private DateTime DateTimeHelper(int hour, int minute)
@@ -394,7 +433,7 @@ namespace AppleFlyover
                     WebView.Visibility = Visibility.Collapsed;
                     await SpotifyHelper.ProcessRedirect(WebView.Source);
                     Task spotifyTokenRefresh = SpotifyHelper.CheckIfRefreshNeeded();
-                    SpotifyHelper.StartUpdate();
+                    _ = SpotifyHelper.StartUpdate();
                 }
             }
             catch

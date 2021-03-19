@@ -12,6 +12,7 @@ using AppleFlyover.Spotify;
 using Windows.UI.Xaml.Media.Imaging;
 using System.Threading;
 using System.ComponentModel;
+using Windows.Networking.Connectivity;
 
 namespace AppleFlyover
 {
@@ -21,6 +22,7 @@ namespace AppleFlyover
         private const string BaseSpotifyUserTracks = "https://api.spotify.com/v1/me/tracks/";
         public event PropertyChangedEventHandler PropertyChanged;
         private HttpClient httpClient;
+        private NetworkConnectivityLevel currentNetworkConnectivityLevel;
         private DateTime? TokenExpireTime { get; set; }
         private string AccessToken { get; set; }
         private string RefreshToken { get; set; }
@@ -84,6 +86,16 @@ namespace AppleFlyover
             TokenExpireTime = null;
             AutomaticallyRefreshInfo = false;
             cancellationTokenSource = new CancellationTokenSource();
+
+            currentNetworkConnectivityLevel = NetworkInformation.GetInternetConnectionProfile().GetNetworkConnectivityLevel();
+            Available = currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess;
+            NetworkInformation.NetworkStatusChanged += NetworkInformation_NetworkStatusChanged;
+        }
+
+        private void NetworkInformation_NetworkStatusChanged(object sender)
+        {
+            currentNetworkConnectivityLevel = NetworkInformation.GetInternetConnectionProfile().GetNetworkConnectivityLevel();
+            Available = currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess;
         }
 
         public string GetAuthorizeUrl()
@@ -190,7 +202,7 @@ namespace AppleFlyover
                     if (tries <= 0)
                     {
                         AutomaticallyRefreshInfo = false;
-                        await EmptyPlayer();
+                        EmptyPlayer();
                         return;
                     }
 
@@ -285,7 +297,7 @@ namespace AppleFlyover
             }
         }
 
-        private async Task EmptyPlayer()
+        private void EmptyPlayer()
         {
             IsPlaying = false;
             TrackName = string.Empty;
@@ -314,7 +326,7 @@ namespace AppleFlyover
                 cancellationTokenSource.Dispose();
                 cancellationTokenSource = new CancellationTokenSource();
                 await Task.Delay(TimeSpan.FromSeconds(1));
-                StartUpdate();
+                _ = StartUpdate();
             }
             catch
             {
@@ -330,7 +342,7 @@ namespace AppleFlyover
                 cancellationTokenSource.Dispose();
                 cancellationTokenSource = new CancellationTokenSource();
                 await Task.Delay(TimeSpan.FromSeconds(1));
-                StartUpdate();
+                _ = StartUpdate();
             }
             catch
             {
@@ -346,7 +358,7 @@ namespace AppleFlyover
                 cancellationTokenSource.Dispose();
                 cancellationTokenSource = new CancellationTokenSource();
                 await Task.Delay(TimeSpan.FromSeconds(1));
-                StartUpdate();
+                _ = StartUpdate();
             }
             catch
             {
@@ -362,7 +374,7 @@ namespace AppleFlyover
                 cancellationTokenSource.Dispose();
                 cancellationTokenSource = new CancellationTokenSource();
                 await Task.Delay(TimeSpan.FromSeconds(1));
-                StartUpdate();
+                _ = StartUpdate();
             }
             catch
             {

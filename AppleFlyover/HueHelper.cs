@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Q42.HueApi;
@@ -56,12 +57,8 @@ namespace AppleFlyover
 
         public async Task Setup()
         {
-            IBridgeLocator locator = new HttpBridgeLocator();
-            var ips = (await locator.LocateBridgesAsync(TimeSpan.FromSeconds(5))).ToList();
-            if (ips.Count > 0)
-            {
-                hueClient = new LocalHueClient(ips[0].IpAddress, Secrets.HueUsername);
-            }
+            string ip = await GetBridgeIp();
+            hueClient = new LocalHueClient(ip, Secrets.HueUsername);
 
             var lights = await hueClient.GetLightsAsync();
             foreach (var light in lights)
@@ -85,6 +82,37 @@ namespace AppleFlyover
                 groupToId.Add(name, group.Id);
                 Lights.Add(name);
             }
+        }
+
+        private async Task<string> GetBridgeIp()
+        {
+            IBridgeLocator locator = new HttpBridgeLocator();
+            SettingsManager settingsManager = new SettingsManager();
+            string ip;
+            try
+            {
+                var ips = (await locator.LocateBridgesAsync(TimeSpan.FromSeconds(5))).ToList();
+                if (ips.Count > 0)
+                {
+                    ip = ips[0].IpAddress;
+                    settingsManager.LastHueIp = ip;
+                }
+                else
+                {
+                    ip = null;
+                }
+            }
+            catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
+            {
+                ip = settingsManager.LastHueIp;
+            }
+
+            if (string.IsNullOrEmpty(ip))
+            {
+                throw new Exception("Could not determine Hue bridge IP address");
+            }
+
+            return ip;
         }
 
         public async Task SelectLight(string name)
