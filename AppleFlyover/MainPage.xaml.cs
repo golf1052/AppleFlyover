@@ -1,25 +1,22 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
+using AppleFlyover.AirQuality;
+using Windows.ApplicationModel.Core;
+using Windows.Devices.Geolocation;
+using Windows.Media.Core;
+using Windows.Media.Playback;
+using Windows.Networking.Connectivity;
+using Windows.System.Profile;
+using Windows.UI;
+using Windows.UI.Input;
 using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Navigation;
-using Windows.Media.Core;
-using Windows.Media.Playback;
-using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Media;
-using Windows.UI;
-using Windows.UI.Input;
-using System.Diagnostics;
-using Windows.System.Profile;
-using Windows.ApplicationModel.Core;
-using Windows.Devices.Geolocation;
-using AppleFlyover.AirQuality;
-using Windows.Networking.Connectivity;
+using Windows.UI.Xaml.Navigation;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -73,6 +70,8 @@ namespace AppleFlyover
         }
         private Device device;
 
+        public CalendarHelper CalendarHelper { get; private set; }
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -110,6 +109,7 @@ namespace AppleFlyover
             SpotifyHelper = new SpotifyHelper();
             HueHelper = new HueHelper();
             AirQualityHelper = new AirQualityHelper();
+            CalendarHelper = new CalendarHelper();
 
             rotationBuffer = 0;
             lightMode = LightMode.Brightness;
@@ -221,6 +221,7 @@ namespace AppleFlyover
             Task checkFrozenVideo = CheckFrozenVideo();
             Task processRotationBufferTask = ProcessRotationBuffer();
             _ = AirQualityHelper.Run();
+            _ = CalendarHelper.Run();
 
             base.OnNavigatedTo(e);
         }
@@ -296,7 +297,9 @@ namespace AppleFlyover
 
         private void UpdateClock()
         {
-            timeBlock.Text = DateTime.Now.ToString("h:mm tt").ToLower();
+            DateTime now = DateTime.Now;
+            timeBlock.Text = now.ToString("t").ToLower();
+            dateBlock.Text = now.ToString("dddd, MMMM d");
         }
 
         /// <summary>

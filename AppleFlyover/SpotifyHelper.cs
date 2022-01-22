@@ -424,6 +424,10 @@ namespace AppleFlyover
                 {
                     return default(T);
                 }
+                else if (responseMessage.StatusCode == System.Net.HttpStatusCode.NoContent)
+                {
+                    return default(T);
+                }
                 else
                 {
                     throw new Exception();
