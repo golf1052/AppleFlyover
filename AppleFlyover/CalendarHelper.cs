@@ -46,44 +46,47 @@ namespace AppleFlyover
 
         public async Task Update()
         {
-            Events.Clear();
-            DateTime now = DateTime.Now;
-            var userEvents = await graphServiceClient.Me.Events.Request()
-                .Header("Prefer", $"outlook.timezone=\"{TimeZoneInfo.Local.Id}\"")
-                .Select(u => new
+            while (true)
+            {
+                Events.Clear();
+                DateTime now = DateTime.Now;
+                var userEvents = await graphServiceClient.Me.Events.Request()
+                    .Header("Prefer", $"outlook.timezone=\"{TimeZoneInfo.Local.Id}\"")
+                    .Select(u => new
+                    {
+                        u.Subject,
+                        u.Start,
+                        u.End,
+                        u.Location
+                    })
+                    .Filter($"start/dateTime ge '{now:yyyy-MM-dd}'")
+                    .OrderBy("start/dateTime")
+                    .GetAsync();
+
+                var todayEvents = userEvents.Where(u =>
                 {
-                    u.Subject,
-                    u.Start,
-                    u.End,
-                    u.Location
+                    DateTime startTime = DateTime.Parse(u.Start.DateTime);
+                    return startTime.Year == now.Year && startTime.Month == now.Month && startTime.Day == now.Day;
                 })
-                .Filter($"start/dateTime ge '{now:yyyy-MM-dd}'")
-                .OrderBy("start/dateTime")
-                .GetAsync();
-
-            var todayEvents = userEvents.Where(u =>
-            {
-                DateTime startTime = DateTime.Parse(u.Start.DateTime);
-                return startTime.Year == now.Year && startTime.Month == now.Month && startTime.Day == now.Day;
-            })
-            .Select(e =>
-            {
-                CalendarItem item = new CalendarItem()
+                .Select(e =>
                 {
-                    Subject = e.Subject,
-                    Start = DateTime.Parse(e.Start.DateTime).ToString("t"),
-                    End = DateTime.Parse(e.End.DateTime).ToString("t"),
-                    Location = e.Location.DisplayName
-                };
-                return item;
-            })
-            .ToList();
+                    CalendarItem item = new CalendarItem()
+                    {
+                        Subject = e.Subject,
+                        Start = DateTime.Parse(e.Start.DateTime).ToString("t"),
+                        End = DateTime.Parse(e.End.DateTime).ToString("t"),
+                        Location = e.Location.DisplayName
+                    };
+                    return item;
+                })
+                .ToList();
 
-            foreach (var item in todayEvents)
-            {
-                Events.Add(item);
+                foreach (var item in todayEvents)
+                {
+                    Events.Add(item);
+                }
+                await Task.Delay(TimeSpan.FromMinutes(15));
             }
-            await Task.Delay(TimeSpan.FromMinutes(15));
         }
     }
 }
