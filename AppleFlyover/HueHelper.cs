@@ -75,9 +75,13 @@ namespace AppleFlyover
                 {
                     continue;
                 }
-                if (Lights.Contains(name))
+                if (group.Type == Q42.HueApi.Models.Groups.GroupType.Room)
                 {
-                    name = $"{name} (group)";
+                    name = $"{name} (room)";
+                }
+                else
+                {
+                    name = $"{name} (zone)";
                 }
                 groupToId.Add(name, group.Id);
                 Lights.Add(name);
@@ -226,12 +230,12 @@ namespace AppleFlyover
                 if (lightOrGroup)
                 {
                     id = lightToId[selectedLight];
-                    Task sendCommand = hueClient.SendCommandAsync(command, new string[] { id });
+                    await hueClient.SendCommandAsync(command, new string[] { id });
                 }
                 else
                 {
                     id = groupToId[selectedLight];
-                    Task sendCommand = hueClient.SendGroupCommandAsync(command, id);
+                    await hueClient.SendGroupCommandAsync(command, id);
                 }
             }
         }
