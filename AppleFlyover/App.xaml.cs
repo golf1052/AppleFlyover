@@ -7,6 +7,7 @@ using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Foundation.Diagnostics;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -33,6 +34,7 @@ namespace AppleFlyover
                 Microsoft.ApplicationInsights.WindowsCollectors.Session);
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+            this.UnhandledException += App_UnhandledException;
         }
 
         /// <summary>
@@ -105,9 +107,16 @@ namespace AppleFlyover
             deferral.Complete();
         }
 
-        public static void Start(ApplicationInitializationCallback callback)
+        private async void App_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("test");
+            using (FileLoggingSession session = new FileLoggingSession("AppleFlyover"))
+            using (LoggingChannel channel = new LoggingChannel("CrashChannel", null))
+            {
+                session.AddLoggingChannel(channel);
+                channel.LogMessage($"Exception: {e.Exception}\nMessage: {e.Message}");
+                await session.CloseAndSaveToFileAsync();
+                e.Handled = false;
+            }
         }
     }
 }
