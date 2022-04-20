@@ -95,7 +95,12 @@ namespace AppleFlyover
         private void NetworkInformation_NetworkStatusChanged(object sender)
         {
             currentNetworkConnectivityLevel = NetworkInformation.GetInternetConnectionProfile().GetNetworkConnectivityLevel();
-            Available = currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess;
+
+            // Apparently this method can be called not on the UI thread so make sure we set Available on the UI thread
+            _ = HelperMethods.CallOnMainViewUiThreadAsync(() =>
+            {
+                Available = currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess;
+            });
         }
 
         public string GetAuthorizeUrl()
@@ -123,13 +128,19 @@ namespace AppleFlyover
                 }
                 catch
                 {
-                    Available = false;
+                    _ = HelperMethods.CallOnMainViewUiThreadAsync(() =>
+                    {
+                        Available = false;
+                    });
                     throw;
                 }
             }
             else
             {
-                Available = false;
+                _ = HelperMethods.CallOnMainViewUiThreadAsync(() =>
+                {
+                    Available = false;
+                });
             }
         }
 
@@ -157,7 +168,10 @@ namespace AppleFlyover
                     }
                     catch
                     {
-                        Available = false;
+                        _ = HelperMethods.CallOnMainViewUiThreadAsync(() =>
+                        {
+                            Available = false;
+                        });
                         break;
                     }
                 }
