@@ -16,9 +16,9 @@ namespace AppleFlyover
         private const string Apple10Url = "http://a1.phobos.apple.com/us/r1000/000/Features/atv/AutumnResources/videos/entries.json";
         // Can't use 11 because it's only HEVC movies
         private const string Apple11Url = "http://sylvan.apple.com/Aerials/2x/entries.json";
-        private const string Apple12Url = "https://sylvan.apple.com/Aerials/resources.tar";
-        private const string Apple13Url = "https://sylvan.apple.com/Aerials/resources-13.tar";
-        private const string Apple16Url = "https://sylvan.apple.com/Aerials/resources-16.tar";
+        private const string Apple12Url = "http://sylvan.apple.com/Aerials/resources.tar";
+        private const string Apple13Url = "http://sylvan.apple.com/Aerials/resources-13.tar";
+        private const string Apple16Url = "http://sylvan.apple.com/Aerials/resources-16.tar";
 
         private readonly HttpClient httpClient;
         public List<Movie> Movies { get; private set; }
@@ -54,8 +54,8 @@ namespace AppleFlyover
                 {
                     string url = (string)o["url-1080-H264"];
                     url = url.Replace("\\", "");
-                    // Domain had misconfigured cert, uncomment to downgrade to http
-                    //url = url.Replace("https", "http");
+                    // Domain has misconfigured cert so downgrade to http
+                    url = url.Replace("https", "http");
                     Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"], (string)o["id"]);
                     Movies.Add(movie);
                 }
@@ -67,18 +67,21 @@ namespace AppleFlyover
                 {
                     string url = (string)o["url-1080-H264"];
                     url = url.Replace("\\", "");
-                    // Domain had misconfigured cert, uncomment to downgrade to http
-                    //url = url.Replace("https", "http");
+                    // Domain has misconfigured cert so downgrade to http
+                    url = url.Replace("https", "http");
                     Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"], (string)o["id"]);
                     Movies.Add(movie);
                 }
 
+                // Get tvOS16 movies
                 response = await httpClient.GetAsync(Apple16Url);
                 JObject tv16MoviesO = ExtractTar(await response.Content.ReadAsStreamAsync());
                 foreach (JObject o in (JArray)tv16MoviesO["assets"])
                 {
                     string url = (string)o["url-1080-H264"];
                     url = url.Replace("\\", "");
+                    // Domain has misconfigured cert so downgrade to http
+                    url = url.Replace("https", "http");
                     Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"], (string)o["id"]);
                     Movies.Add(movie);
                 }
