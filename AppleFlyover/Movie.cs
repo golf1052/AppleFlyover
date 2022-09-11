@@ -7,11 +7,13 @@ namespace AppleFlyover
     {
         public Uri Url { get; private set; }
         public string Label { get; private set; }
+        public string CacheFileName { get; private set; }
 
-        public Movie(Uri url, string label)
+        public Movie(Uri url, string label, string id)
         {
             Url = url;
             Label = label;
+            CacheFileName = $"{label}-{id}.mov";
         }
     }
 }

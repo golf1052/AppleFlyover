@@ -14,26 +14,21 @@ namespace AppleFlyover.AirQuality
 {
     public class AirQualityHelper : INotifyPropertyChanged
     {
-        private AQI aqi;
-        private WAQA waqa;
         private AirNowAPI airNowAPI;
         private Geolocator geolocator;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private int currentWAQA;
-        public int CurrentWAQA
+        private int currentAQI;
+        public int CurrentAQI
         {
-            get { return currentWAQA; }
+            get { return currentAQI; }
             private set
             {
-                currentWAQA = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentWAQA)));
+                currentAQI = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentAQI)));
                 Brush = new SolidColorBrush(GetCategoryColor());
                 Text = GetText();
-                System.Diagnostics.Debug.WriteLine(CurrentWAQA);
-                System.Diagnostics.Debug.WriteLine(GetCategoryColor());
-                System.Diagnostics.Debug.WriteLine(Text);
             }
         }
 
@@ -53,8 +48,6 @@ namespace AppleFlyover.AirQuality
 
         public AirQualityHelper()
         {
-            aqi = new AQI();
-            waqa = new WAQA();
             airNowAPI = new AirNowAPI(Secrets.AirNowAPIKey);
             geolocator = new Geolocator()
             {
@@ -62,7 +55,7 @@ namespace AppleFlyover.AirQuality
                 ReportInterval = (uint)TimeSpan.FromMinutes(15).TotalMilliseconds
             };
             geolocator.AllowFallbackToConsentlessPositions();
-            CurrentWAQA = -1;
+            CurrentAQI = -1;
         }
 
         public async Task Run()
@@ -75,29 +68,11 @@ namespace AppleFlyover.AirQuality
                 Observation pm25Observation = observations.FirstOrDefault(o => o.ParameterName == "PM2.5");
                 if (pm25Observation != null)
                 {
-                    int aqiValue = pm25Observation.AQI;
-                    float calculatedPM25 = aqi.ToConcentrationValue(aqiValue);
-                    if (calculatedPM25 == -1)
-                    {
-                        CurrentWAQA = int.MaxValue;
-                    }
-                    else
-                    {
-                        int calculatedWAQAValue = waqa.ToIndexValue(calculatedPM25);
-                        if (calculatedWAQAValue == -1)
-                        {
-                            CurrentWAQA = int.MaxValue;
-                        }
-                        else
-                        {
-                            CurrentWAQA = calculatedWAQAValue;
-                        }
-                    }
-                    
+                    CurrentAQI = pm25Observation.AQI;
                 }
                 else
                 {
-                    CurrentWAQA = -1;
+                    CurrentAQI = -1;
                 }
                 await Task.Delay(TimeSpan.FromMinutes(30));
             }
@@ -105,31 +80,31 @@ namespace AppleFlyover.AirQuality
 
         public Color GetCategoryColor()
         {
-            if (CurrentWAQA < 0)
+            if (CurrentAQI < 0)
             {
                 return Colors.Black;
             }
-            else if (CurrentWAQA <= 50)
+            else if (CurrentAQI <= 50)
             {
                 // Green
                 return Color.FromArgb(255, 96, 169, 23);
             }
-            else if (CurrentWAQA <= 100)
+            else if (CurrentAQI <= 100)
             {
                 // Yellow
                 return Color.FromArgb(255, 227, 200, 0);
             }
-            else if (CurrentWAQA <= 150)
+            else if (CurrentAQI <= 150)
             {
                 // Orange
                 return Color.FromArgb(255, 250, 104, 0);
             }
-            else if (CurrentWAQA <= 200)
+            else if (CurrentAQI <= 200)
             {
                 // Red
                 return Color.FromArgb(255, 229, 20, 0);
             }
-            else if (CurrentWAQA <= 300)
+            else if (CurrentAQI <= 300)
             {
                 // Purple
                 return Color.FromArgb(255, 170, 0, 255);
@@ -143,17 +118,17 @@ namespace AppleFlyover.AirQuality
 
         public string GetText()
         {
-            if (CurrentWAQA < 0)
+            if (CurrentAQI < 0)
             {
                 return "???";
             }
-            else if (CurrentWAQA == int.MaxValue)
+            else if (CurrentAQI == int.MaxValue)
             {
                 return "!!!";
             }
             else
             {
-                return CurrentWAQA.ToString();
+                return CurrentAQI.ToString();
             }
         }
     }

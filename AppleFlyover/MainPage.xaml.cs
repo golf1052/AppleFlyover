@@ -8,7 +8,9 @@ using Windows.ApplicationModel.Core;
 using Windows.Devices.Geolocation;
 using Windows.Media.Core;
 using Windows.Media.Playback;
+using Windows.Networking.BackgroundTransfer;
 using Windows.Networking.Connectivity;
+using Windows.Storage;
 using Windows.System.Profile;
 using Windows.UI;
 using Windows.UI.Input;
@@ -235,7 +237,7 @@ namespace AppleFlyover
             if (currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess && !ranOnLaunchInternetTasks)
             {
                 await appleMovieDownloader.LoadMovies();
-                PlayMovies();
+                await PlayMovies();
                 WebView.Visibility = Visibility.Visible;
                 WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
                 ranOnLaunchInternetTasks = true;
@@ -329,7 +331,7 @@ namespace AppleFlyover
                     if (allMatch)
                     {
                         lastPositions.Clear();
-                        PlayMovies();
+                        await PlayMovies();
                     }
                     else
                     {
@@ -346,7 +348,7 @@ namespace AppleFlyover
             }
         }
 
-        private void PlayMovies()
+        private async Task PlayMovies()
         {
             mediaPlayer.Pause();
             mediaPlayer.Source = null;
@@ -359,9 +361,47 @@ namespace AppleFlyover
                     {
                         labelBlock.Text = selectedMovie.Label;
                     });
-                mediaPlayer.Source = MediaSource.CreateFromUri(selectedMovie.Url);
+                mediaPlayer.Source = await GetMovieSource(selectedMovie);
                 mediaPlayer.Play();
             }
+        }
+
+        private async Task<IMediaPlaybackSource> GetMovieSource(Movie movie)
+        {
+            // First try to get the movie from local storage
+            StorageFolder cacheFolder = ApplicationData.Current.LocalCacheFolder;
+            StorageFile movieFile = await cacheFolder.TryGetItemAsync(movie.CacheFileName).AsTask() as StorageFile;
+            if (movieFile == null)
+            {
+                return await GetDownload(movie);
+            }
+            else
+            {
+                // If the movie is greater than 30 days old then get a new version
+                if (movieFile.DateCreated < DateTimeOffset.Now - TimeSpan.FromDays(30))
+                {
+                    await movieFile.DeleteAsync(StorageDeleteOption.PermanentDelete);
+                    return await GetDownload(movie);
+                }
+                else
+                {
+                    return MediaSource.CreateFromStorageFile(movieFile);
+                }
+            }
+        }
+
+        private async Task<IMediaPlaybackSource> GetDownload(Movie movie)
+        {
+            StorageFolder cacheFolder = ApplicationData.Current.LocalCacheFolder;
+            StorageFile destinationFile = await cacheFolder.CreateFileAsync(movie.CacheFileName, CreationCollisionOption.ReplaceExisting).AsTask();
+
+            BackgroundDownloader downloader = new BackgroundDownloader();
+            DownloadOperation download = downloader.CreateDownload(movie.Url, destinationFile);
+            // According to this source https://docs.microsoft.com/en-us/windows/uwp/audio-video-camera/media-playback-with-mediasource#create-a-mediasource-from-a-downloadoperation
+            // we need to set random access and start the download before we can set it as a media source
+            download.IsRandomAccessRequired = true;
+            _ = download.StartAsync().AsTask();
+            return MediaSource.CreateFromDownloadOperation(download);
         }
 
         private DateTime DateTimeHelper(int hour, int minute)
@@ -382,14 +422,14 @@ namespace AppleFlyover
             return appleMovieDownloader.Movies[random.Next(appleMovieDownloader.Movies.Count)];
         }
 
-        private void MediaPlayer_MediaEnded(MediaPlayer sender, object args)
+        private async void MediaPlayer_MediaEnded(MediaPlayer sender, object args)
         {
-            PlayMovies();
+            await PlayMovies();
         }
 
-        private void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+        private async void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
-            PlayMovies();
+            await PlayMovies();
         }
 
         public Symbol GetCorrectSymbol(bool isPlaying)

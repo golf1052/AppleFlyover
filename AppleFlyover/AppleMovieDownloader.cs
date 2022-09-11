@@ -12,12 +12,13 @@ namespace AppleFlyover
 {
     public class AppleMovieDownloader
     {
-        // urls from https://github.com/JohnCoates/Aerial/blob/a9e8be1bd5fffdce8465eaa644b5fa08cc68a4fd/Aerial/Source/Models/ManifestLoader.swift#L320-L335
+        // urls from https://vscode.dev/github.com/JohnCoates/Aerial/blob/97068951d2c67a56d42f705d405bd0578e45a672/Aerial/Source/Models/Sources/SourceList.swift#L17
         private const string Apple10Url = "http://a1.phobos.apple.com/us/r1000/000/Features/atv/AutumnResources/videos/entries.json";
         // Can't use 11 because it's only HEVC movies
         private const string Apple11Url = "http://sylvan.apple.com/Aerials/2x/entries.json";
-        private const string Apple12Url = "http://sylvan.apple.com/Aerials/resources.tar";
-        private const string Apple13Url = "http://sylvan.apple.com/Aerials/resources-13.tar";
+        private const string Apple12Url = "https://sylvan.apple.com/Aerials/resources.tar";
+        private const string Apple13Url = "https://sylvan.apple.com/Aerials/resources-13.tar";
+        private const string Apple16Url = "https://sylvan.apple.com/Aerials/resources-16.tar";
 
         private readonly HttpClient httpClient;
         public List<Movie> Movies { get; private set; }
@@ -41,7 +42,7 @@ namespace AppleFlyover
                     JArray assets = (JArray)o["assets"];
                     foreach (JObject movieO in assets)
                     {
-                        Movie movie = new Movie(new Uri((string)movieO["url"]), (string)movieO["accessibilityLabel"]);
+                        Movie movie = new Movie(new Uri((string)movieO["url"]), (string)movieO["accessibilityLabel"], (string)movieO["id"]);
                         Movies.Add(movie);
                     }
                 }
@@ -53,9 +54,9 @@ namespace AppleFlyover
                 {
                     string url = (string)o["url-1080-H264"];
                     url = url.Replace("\\", "");
-                    // Domain has misconfigured cert so downgrade to http
-                    url = url.Replace("https", "http");
-                    Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"]);
+                    // Domain had misconfigured cert, uncomment to downgrade to http
+                    //url = url.Replace("https", "http");
+                    Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"], (string)o["id"]);
                     Movies.Add(movie);
                 }
 
@@ -66,9 +67,19 @@ namespace AppleFlyover
                 {
                     string url = (string)o["url-1080-H264"];
                     url = url.Replace("\\", "");
-                    // Domain has misconfigured cert so downgrade to http
-                    url = url.Replace("https", "http");
-                    Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"]);
+                    // Domain had misconfigured cert, uncomment to downgrade to http
+                    //url = url.Replace("https", "http");
+                    Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"], (string)o["id"]);
+                    Movies.Add(movie);
+                }
+
+                response = await httpClient.GetAsync(Apple16Url);
+                JObject tv16MoviesO = ExtractTar(await response.Content.ReadAsStreamAsync());
+                foreach (JObject o in (JArray)tv16MoviesO["assets"])
+                {
+                    string url = (string)o["url-1080-H264"];
+                    url = url.Replace("\\", "");
+                    Movie movie = new Movie(new Uri(url), (string)o["accessibilityLabel"], (string)o["id"]);
                     Movies.Add(movie);
                 }
             }

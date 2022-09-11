@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.Foundation.Diagnostics;
+using Windows.Networking.BackgroundTransfer;
+using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -42,7 +45,7 @@ namespace AppleFlyover
         /// will be used such as when the application is launched to open a specific file.
         /// </summary>
         /// <param name="e">Details about the launch request and process.</param>
-        protected override void OnLaunched(LaunchActivatedEventArgs e)
+        protected override async void OnLaunched(LaunchActivatedEventArgs e)
         {
 
 #if DEBUG
@@ -51,6 +54,32 @@ namespace AppleFlyover
                 this.DebugSettings.EnableFrameRateCounter = true;
             }
 #endif
+
+            try
+            {
+                var downloadOperations = await BackgroundDownloader.GetCurrentDownloadsAsync().AsTask();
+                if (downloadOperations.Count > 0)
+                {
+                    using (CancellationTokenSource cancellationTokenSource = new CancellationTokenSource())
+                    {
+                        List<IStorageFile> files = new List<IStorageFile>();
+                        foreach (var download in downloadOperations)
+                        {
+                            files.Add(download.ResultFile);
+                            _ = download.AttachAsync().AsTask(cancellationTokenSource.Token);
+                        }
+                        cancellationTokenSource.Cancel();
+
+                        foreach (var file in files)
+                        {
+                            _ = file.DeleteAsync();
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
 
             Frame rootFrame = Window.Current.Content as Frame;
 
