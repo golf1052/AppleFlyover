@@ -361,7 +361,7 @@ namespace AppleFlyover
                     {
                         labelBlock.Text = selectedMovie.Label;
                     });
-                mediaPlayer.Source = await GetMovieSource(selectedMovie);
+                mediaPlayer.Source = MediaSource.CreateFromUri(selectedMovie.Url);
                 mediaPlayer.Play();
             }
         }
