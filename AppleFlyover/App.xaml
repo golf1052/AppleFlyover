@@ -5,4 +5,8 @@
     xmlns:local="using:AppleFlyover"
     RequestedTheme="Light">
 
+    <Application.Resources>
+        <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+    </Application.Resources>
+
 </Application>

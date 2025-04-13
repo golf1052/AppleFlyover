@@ -9,10 +9,11 @@ using System.Net.Http.Headers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using AppleFlyover.Spotify;
-using Windows.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media.Imaging;
 using System.Threading;
 using System.ComponentModel;
 using Windows.Networking.Connectivity;
+using Microsoft.UI.Dispatching;
 
 namespace AppleFlyover
 {
@@ -29,6 +30,7 @@ namespace AppleFlyover
         private bool AutomaticallyRefreshInfo { get; set; }
         private SpotifyCurrentlyPlaying CurrentlyPlaying { get; set; }
         private CancellationTokenSource cancellationTokenSource;
+        private DispatcherQueue mainPageDispatcher;
 
         private bool available;
         public bool Available
@@ -79,13 +81,14 @@ namespace AppleFlyover
             private set { savedTrack = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SavedTrack))); }
         }
 
-        public SpotifyHelper()
+        public SpotifyHelper(DispatcherQueue dispatcherQueue)
         {
             httpClient = new HttpClient();
             Available = true;
             TokenExpireTime = null;
             AutomaticallyRefreshInfo = false;
             cancellationTokenSource = new CancellationTokenSource();
+            mainPageDispatcher = dispatcherQueue;
 
             currentNetworkConnectivityLevel = NetworkInformation.GetInternetConnectionProfile().GetNetworkConnectivityLevel();
             Available = currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess;
@@ -97,7 +100,7 @@ namespace AppleFlyover
             currentNetworkConnectivityLevel = NetworkInformation.GetInternetConnectionProfile().GetNetworkConnectivityLevel();
 
             // Apparently this method can be called not on the UI thread so make sure we set Available on the UI thread
-            _ = HelperMethods.CallOnMainViewUiThreadAsync(() =>
+            HelperMethods.CallOnUiThreadAsync(mainPageDispatcher, () =>
             {
                 Available = currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess;
             });
@@ -128,7 +131,7 @@ namespace AppleFlyover
                 }
                 catch
                 {
-                    _ = HelperMethods.CallOnMainViewUiThreadAsync(() =>
+                    HelperMethods.CallOnUiThreadAsync(mainPageDispatcher, () =>
                     {
                         Available = false;
                     });
@@ -137,7 +140,7 @@ namespace AppleFlyover
             }
             else
             {
-                _ = HelperMethods.CallOnMainViewUiThreadAsync(() =>
+                HelperMethods.CallOnUiThreadAsync(mainPageDispatcher, () =>
                 {
                     Available = false;
                 });
@@ -168,7 +171,7 @@ namespace AppleFlyover
                     }
                     catch
                     {
-                        _ = HelperMethods.CallOnMainViewUiThreadAsync(() =>
+                        HelperMethods.CallOnUiThreadAsync(mainPageDispatcher, () =>
                         {
                             Available = false;
                         });

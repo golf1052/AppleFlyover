@@ -4,6 +4,12 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using AppleFlyover.AirQuality;
+using Microsoft.UI;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Navigation;
 using Windows.ApplicationModel.Core;
 using Windows.Devices.Geolocation;
 using Windows.Media.Core;
@@ -15,10 +21,6 @@ using Windows.System.Profile;
 using Windows.UI;
 using Windows.UI.Input;
 using Windows.UI.ViewManagement;
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Navigation;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -71,6 +73,7 @@ namespace AppleFlyover
             Other
         }
         private Device device;
+        private DispatcherQueue MainPageDispatcher;
 
         public CalendarHelper CalendarHelper { get; private set; }
 
@@ -80,7 +83,8 @@ namespace AppleFlyover
 
             ranOnLaunchInternetTasks = false;
             currentNetworkConnectivityLevel = NetworkInformation.GetInternetConnectionProfile().GetNetworkConnectivityLevel();
-            Window.Current.Activated += Current_Activated;
+            App.Window.Activated += Window_Activated;
+            MainPageDispatcher = DispatcherQueue.GetForCurrentThread();
 
             NetworkInformation.NetworkStatusChanged += NetworkInformation_NetworkStatusChanged;
 
@@ -102,13 +106,14 @@ namespace AppleFlyover
             mediaPlayer.MediaEnded += MediaPlayer_MediaEnded;
             mediaPlayer.MediaFailed += MediaPlayer_MediaFailed;
             mediaPlayerElement.SetMediaPlayer(mediaPlayer);
+            App.Window.GetAppWindow().SetPresenter(Microsoft.UI.Windowing.AppWindowPresenterKind.FullScreen);
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
             httpClient = new HttpClient();
             appleMovieDownloader = new AppleMovieDownloader(httpClient);
             sunrise = DateTime.MinValue;
             sunset = DateTime.MinValue;
             lastPositions = new Queue<TimeSpan>();
-            SpotifyHelper = new SpotifyHelper();
+            SpotifyHelper = new SpotifyHelper(MainPageDispatcher);
             HueHelper = new HueHelper();
             AirQualityHelper = new AirQualityHelper();
             CalendarHelper = new CalendarHelper();
@@ -118,16 +123,30 @@ namespace AppleFlyover
             
             if (device == Device.Desktop)
             {
-                dial = RadialController.CreateForCurrentView();
+                var hwnd = App.WindowHandle;
+                dial = RadialControllerInterop.CreateForWindow(hwnd);
                 dial.RotationResolutionInDegrees = 5;
                 dial.UseAutomaticHapticFeedback = false;
-                dialConfig = RadialControllerConfiguration.GetForCurrentView();
+                dialConfig = RadialControllerConfigurationInterop.GetForWindow(hwnd);
                 menuItems = new List<RadialControllerMenuItem>();
                 isWindowFocused = true;
                 dial.ButtonClicked += Dial_ButtonClicked;
                 dial.RotationChanged += Dial_RotationChanged;
                 dial.ControlAcquired += Dial_ControlAcquired;
                 dial.ControlLost += Dial_ControlLost;
+            }
+        }
+
+        private void Window_Activated(object sender, WindowActivatedEventArgs args)
+        {
+            if (args.WindowActivationState == WindowActivationState.Deactivated)
+            {
+                // Window deactivated
+            }
+            else
+            {
+                // Window activated
+                UpdateClock();
             }
         }
 
@@ -184,7 +203,7 @@ namespace AppleFlyover
                 }
                 else if (lightMode == LightMode.Brightness)
                 {
-                    LightBrightness.Value += rotation;
+                    //LightBrightness.Value += rotation;
                 }
                 rotationBuffer = 0;
             }
@@ -193,19 +212,6 @@ namespace AppleFlyover
         private async void Dial_ButtonClicked(RadialController sender, RadialControllerButtonClickedEventArgs args)
         {
             await HueHelper.ToggleLight();
-        }
-
-        private void Current_Activated(object sender, Windows.UI.Core.WindowActivatedEventArgs e)
-        {
-            if (e.WindowActivationState == Windows.UI.Core.CoreWindowActivationState.Deactivated)
-            {
-                // window deactivated
-            }
-            else
-            {
-                // window activated
-                UpdateClock();
-            }
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -239,7 +245,9 @@ namespace AppleFlyover
                 await appleMovieDownloader.LoadMovies();
                 await PlayMovies();
                 WebView.Visibility = Visibility.Visible;
-                WebView.Navigate(new Uri(SpotifyHelper.GetAuthorizeUrl()));
+                string spotifyUrl = SpotifyHelper.GetAuthorizeUrl();
+                System.Diagnostics.Debug.WriteLine(spotifyUrl);
+                WebView.Source = new Uri(spotifyUrl);
                 ranOnLaunchInternetTasks = true;
             }
         }
@@ -356,11 +364,10 @@ namespace AppleFlyover
             {
                 Movie selectedMovie = GetRandomMovie();
                 // need to update specifically on the UI thread because this gets called from async methods
-                _ = CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-                    () =>
-                    {
-                        labelBlock.Text = selectedMovie.Label;
-                    });
+                HelperMethods.CallOnUiThreadAsync(MainPageDispatcher, () =>
+                {
+                    labelBlock.Text = selectedMovie.Label;
+                });
                 mediaPlayer.Source = MediaSource.CreateFromUri(selectedMovie.Url);
                 mediaPlayer.Play();
             }
@@ -467,25 +474,7 @@ namespace AppleFlyover
             await SpotifyHelper.GoFoward();
         }
 
-        private async void WebView_NavigationCompleted(WebView sender, WebViewNavigationCompletedEventArgs args)
-        {
-            try
-            {
-                if (WebView.Source.Host.Contains("golf1052.com"))
-                {
-                    WebView.Visibility = Visibility.Collapsed;
-                    await SpotifyHelper.ProcessRedirect(WebView.Source);
-                    Task spotifyTokenRefresh = SpotifyHelper.CheckIfRefreshNeeded();
-                    _ = SpotifyHelper.StartUpdate();
-                }
-            }
-            catch
-            {
-                WebView.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        private async void LightBrightness_ValueChanged(object sender, Windows.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+        private async void LightBrightness_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
         {
             if (HueHelper != null)
             {
@@ -554,11 +543,29 @@ namespace AppleFlyover
             }
         }
 
-        private async void VolumeSlider_ValueChanged(object sender, Windows.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+        private async void VolumeSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
         {
             if (SpotifyHelper != null)
             {
                 await SpotifyHelper.SetVolume((uint)e.NewValue);
+            }
+        }
+
+        private async void WebView_NavigationCompleted_1(Microsoft.UI.Xaml.Controls.WebView2 sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs args)
+        {
+            try
+            {
+                if (WebView.Source.Host.Contains("golf1052.com"))
+                {
+                    WebView.Visibility = Visibility.Collapsed;
+                    await SpotifyHelper.ProcessRedirect(WebView.Source);
+                    Task spotifyTokenRefresh = SpotifyHelper.CheckIfRefreshNeeded();
+                    _ = SpotifyHelper.StartUpdate();
+                }
+            }
+            catch
+            {
+                WebView.Visibility = Visibility.Collapsed;
             }
         }
     }

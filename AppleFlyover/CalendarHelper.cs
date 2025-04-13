@@ -3,12 +3,17 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using AppleFlyover.Models;
+using Azure.Identity;
 using Microsoft.Graph;
 using Microsoft.Graph.Auth;
 using Microsoft.Identity.Client;
+using Microsoft.Identity.Client.Broker;
+using Microsoft.Identity.Client.Extensions.Msal;
+using Microsoft.Kiota.Abstractions.Authentication;
+using WinRT.Interop;
 
 namespace AppleFlyover
 {
@@ -16,39 +21,31 @@ namespace AppleFlyover
     {
         public ObservableCollection<CalendarItem> Events;
         private IPublicClientApplication publicClientApplication;
+        private InteractiveBrowserCredential interactiveBrowserCredential;
         private GraphServiceClient graphServiceClient;
 
         public CalendarHelper()
         {
             Events = new ObservableCollection<CalendarItem>();
+            // Setup cache instructions https://learn.microsoft.com/en-us/entra/msal/dotnet/how-to/token-cache-serialization?tabs=desktop
             publicClientApplication = PublicClientApplicationBuilder.Create(Secrets.GraphClientId)
-                .WithRedirectUri("https://login.microsoftonline.com/common/oauth2/nativeclient")
-                .WithAuthority(AzureCloudInstance.AzurePublic, "consumers")
+                .WithParentActivityOrWindow(() =>
+                {
+                    return App.WindowHandle;
+                })
+                .WithBroker(new BrokerOptions(BrokerOptions.OperatingSystems.Windows))
                 .Build();
-            HttpClient graphHttpClient = GraphClientFactory.Create(new InteractiveAuthenticationProvider(publicClientApplication));
-            graphServiceClient = new GraphServiceClient(graphHttpClient);
+            graphServiceClient = new GraphServiceClient(
+                new BaseBearerTokenAuthenticationProvider(
+                    new TokenProvider(publicClientApplication)));
         }
 
         public async Task Run()
         {
-            var accounts = await publicClientApplication.GetAccountsAsync();
-            var firstAccount = accounts.FirstOrDefault();
-            if (firstAccount != null)
-            {
-                try
-                {
-                    var result = await publicClientApplication.AcquireTokenSilent(new List<string>() { "user.read", "calendars.read" }, firstAccount).ExecuteAsync();
-                }
-                catch (MsalUiRequiredException)
-                {
-                    // this exception means re-authentication is required
-                    var result = await publicClientApplication.AcquireTokenInteractive(new List<string>() { "user.read", "calendars.read" }).ExecuteAsync();
-                }
-            }
-            else
-            {
-                var result = await publicClientApplication.AcquireTokenInteractive(new List<string>() { "user.read", "calendars.read" }).ExecuteAsync();
-            }
+            var storageProperties = new StorageCreationPropertiesBuilder("msal_cache.txt", MsalCacheHelper.UserRootDirectory)
+                .Build();
+            var cacheHelper = await MsalCacheHelper.CreateAsync(storageProperties);
+            cacheHelper.RegisterCache(publicClientApplication.UserTokenCache);
             await Update();
         }
 
@@ -58,23 +55,18 @@ namespace AppleFlyover
             {
                 Events.Clear();
                 DateTime now = DateTime.Now;
-                var calendars = await graphServiceClient.Me.Calendars.Request().GetAsync();
-                foreach (var calendar in calendars)
+                var calendars = await graphServiceClient.Me.Calendars.GetAsync();
+                foreach (var calendar in calendars.Value)
                 {
-                    var userEvents = await graphServiceClient.Me.Calendars[calendar.Id].Events.Request()
-                        .Header("Prefer", $"outlook.timezone=\"{TimeZoneInfo.Local.Id}\"")
-                        .Select(u => new
-                        {
-                            u.Subject,
-                            u.Start,
-                            u.End,
-                            u.Location
-                        })
-                        .Filter($"start/dateTime ge '{now:yyyy-MM-dd}'")
-                        .OrderBy("start/dateTime")
-                        .GetAsync();
+                    var userEvents = await graphServiceClient.Me.Calendars[calendar.Id].Events.GetAsync(requestConfiguration =>
+                    {
+                        requestConfiguration.Headers.Add("Prefer", $"outlook.timezone=\"{TimeZoneInfo.Local.Id}\"");
+                        requestConfiguration.QueryParameters.Select = new string[] { "subject", "start", "end", "location" };
+                        requestConfiguration.QueryParameters.Filter = $"start/dateTime ge '{now:yyyy-MM-dd}'";
+                        requestConfiguration.QueryParameters.Orderby = new string[] { "start/dateTime" };
+                    });
 
-                    var todayEvents = userEvents.Where(u =>
+                    var todayEvents = userEvents.Value.Where(u =>
                     {
                         DateTime startTime = DateTime.Parse(u.Start.DateTime);
                         return startTime.Year == now.Year && startTime.Month == now.Month && startTime.Day == now.Day;
@@ -98,6 +90,46 @@ namespace AppleFlyover
                     }
                 }
                 await Task.Delay(TimeSpan.FromMinutes(15));
+            }
+        }
+
+        class TokenProvider : IAccessTokenProvider
+        {
+            private IPublicClientApplication publicClientApplication;
+
+            public TokenProvider(IPublicClientApplication publicClientApplication)
+            {
+                this.publicClientApplication = publicClientApplication;
+            }
+
+            public AllowedHostsValidator AllowedHostsValidator { get; set; }
+
+            public async Task<string> GetAuthorizationTokenAsync(Uri uri,
+                Dictionary<string, object> additionalAuthenticationContext = default,
+                CancellationToken cancellationToken = default)
+            {
+                var accounts = await publicClientApplication.GetAccountsAsync();
+                var firstAccount = accounts.FirstOrDefault();
+                AuthenticationResult authenticationResult;
+                if (firstAccount != null)
+                {
+                    try
+                    {
+                        authenticationResult = await publicClientApplication.AcquireTokenSilent(new List<string>() { "user.read", "calendars.read" }, firstAccount).ExecuteAsync();
+                    }
+                    catch (MsalUiRequiredException)
+                    {
+                        // this exception means re-authentication is required
+                        authenticationResult = await publicClientApplication.AcquireTokenInteractive(new List<string>() { "user.read", "calendars.read" }).ExecuteAsync();
+                    }
+                }
+                else
+                {
+                    authenticationResult = await publicClientApplication.AcquireTokenInteractive(new List<string>() { "user.read", "calendars.read" })
+                        .ExecuteAsync();
+                }
+
+                return authenticationResult.AccessToken;
             }
         }
     }

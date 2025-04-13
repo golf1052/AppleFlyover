@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "AppleFlyover (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "AppleFlyover (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

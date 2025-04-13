@@ -1,19 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Windows.ApplicationModel.Core;
-using Windows.UI.Core;
+using Microsoft.UI;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Windowing;
 
 namespace AppleFlyover
 {
     public static class HelperMethods
     {
-        public static async Task CallOnUiThreadAsync(CoreDispatcher dispatcher, DispatchedHandler handler) =>
-            await dispatcher.RunAsync(CoreDispatcherPriority.Normal, handler);
+        public static void CallOnUiThreadAsync(DispatcherQueue dispatcherQueue, DispatcherQueueHandler handler) => dispatcherQueue.TryEnqueue(handler);
 
-        public static async Task CallOnMainViewUiThreadAsync(DispatchedHandler handler) =>
-            await CallOnUiThreadAsync(CoreApplication.MainView.CoreWindow.Dispatcher, handler);
+        public static AppWindow GetAppWindow(this Microsoft.UI.Xaml.Window window)
+        {
+            var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(window);
+            return GetAppWindowFromWindowHandle(windowHandle);
+        }
+
+        private static AppWindow GetAppWindowFromWindowHandle(IntPtr windowHandle)
+        {
+            var windowId = Win32Interop.GetWindowIdFromWindow(windowHandle);
+            return AppWindow.GetFromWindowId(windowId);
+        }
     }
 }
