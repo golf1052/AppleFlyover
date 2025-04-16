@@ -4,13 +4,13 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using AppleFlyover.AirQuality;
+using golf1052.SeattleCollectionCalendar;
 using Microsoft.UI;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
-using Windows.ApplicationModel.Core;
 using Windows.Devices.Geolocation;
 using Windows.Media.Core;
 using Windows.Media.Playback;
@@ -43,6 +43,7 @@ namespace AppleFlyover
         public SpotifyHelper SpotifyHelper { get; private set; }
         public HueHelper HueHelper { get; private set; }
         public AirQualityHelper AirQualityHelper { get; private set; }
+        public SolidWasteCollectionHelper SolidWasteCollectionHelper { get; private set; }
 
         private HttpClient httpClient;
         private AppleMovieDownloader appleMovieDownloader;
@@ -116,6 +117,7 @@ namespace AppleFlyover
             SpotifyHelper = new SpotifyHelper(MainPageDispatcher);
             HueHelper = new HueHelper();
             AirQualityHelper = new AirQualityHelper();
+            SolidWasteCollectionHelper = new SolidWasteCollectionHelper(new CollectionClient(httpClient));
             CalendarHelper = new CalendarHelper();
 
             rotationBuffer = 0;
@@ -230,6 +232,7 @@ namespace AppleFlyover
             Task processRotationBufferTask = ProcessRotationBuffer();
             _ = AirQualityHelper.Run();
             _ = CalendarHelper.Run();
+            _ = SolidWasteCollectionHelper.Run();
 
             base.OnNavigatedTo(e);
         }
@@ -301,6 +304,7 @@ namespace AppleFlyover
             while (true)
             {
                 UpdateClock();
+                UpdateSolidWasteAlert();
                 await Task.Delay(TimeSpan.FromSeconds(15));
             }
         }
@@ -310,6 +314,35 @@ namespace AppleFlyover
             DateTime now = DateTime.Now;
             timeBlock.Text = now.ToString("t").ToLower();
             dateBlock.Text = now.ToString("dddd, MMMM d");
+        }
+
+        private void UpdateSolidWasteAlert()
+        {
+            if (SolidWasteCollectionHelper.NextTrigger == null)
+            {
+                return;
+            }
+
+            DateTime now = DateTime.Now;
+            if (now >= SolidWasteCollectionHelper.NextTrigger)
+            {
+                SolidWasteCollectionGrid.Visibility = Visibility.Visible;
+                foreach (var type in SolidWasteCollectionHelper.ToDisplay)
+                {
+                    if (type == SolidWasteType.Garbage)
+                    {
+                        GarbageRow.Visibility = Visibility.Visible;
+                    }
+                    else if (type == SolidWasteType.Recycle)
+                    {
+                        RecyclingRow.Visibility = Visibility.Visible;
+                    }
+                    else if (type == SolidWasteType.FoodYardWaste)
+                    {
+                        CompostRow.Visibility = Visibility.Visible;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -567,6 +600,15 @@ namespace AppleFlyover
             {
                 WebView.Visibility = Visibility.Collapsed;
             }
+        }
+
+        private void AckButton_Click(object sender, RoutedEventArgs e)
+        {
+            SolidWasteCollectionHelper.Ack();
+            SolidWasteCollectionGrid.Visibility = Visibility.Collapsed;
+            GarbageRow.Visibility = Visibility.Collapsed;
+            RecyclingRow.Visibility = Visibility.Collapsed;
+            CompostRow.Visibility = Visibility.Collapsed;
         }
     }
 }

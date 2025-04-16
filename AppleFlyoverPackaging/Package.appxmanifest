@@ -9,7 +9,7 @@
   <Identity
     Name="e362f5a8-cccd-41ba-a64c-a3fe2ac775b4"
     Publisher="CN=Sanders"
-    Version="1.15.3.0" />
+    Version="1.16.1.0" />
 
   <Properties>
     <DisplayName>AppleFlyoverPackaging</DisplayName>

@@ -37,6 +37,27 @@
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
         <MediaPlayerElement x:Name="mediaPlayerElement"/>
+        <Grid x:Name="SolidWasteCollectionGrid" HorizontalAlignment="Center" Margin="0,100" MinWidth="720" VerticalAlignment="Center" Visibility="Collapsed">
+            <Rectangle Fill="#7F000000" Stroke="Red" StrokeThickness="10" RadiusX="10" RadiusY="10"/>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Grid.Row="0" Text="Take out trash" Foreground="White" FontSize="36" Margin="48,10" HorizontalAlignment="Center"/>
+                <Grid x:Name="GarbageRow" Grid.Row="1" Height="75" Margin="10,10" Visibility="Collapsed">
+                    <Rectangle Fill="#021f22" RadiusX="25" RadiusY="25"/>
+                    <TextBlock Text="Garbage" FontSize="24" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Grid>
+                <Grid x:Name="RecyclingRow" Grid.Row="2" Height="75" Margin="10,10" Visibility="Collapsed">
+                    <Rectangle Fill="#0046ad" RadiusX="25" RadiusY="25"/>
+                    <TextBlock Text="Recycling" FontSize="24" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Grid>
+                <Grid x:Name="CompostRow" Grid.Row="3" Height="75" Margin="10,10" Visibility="Collapsed">
+                    <Rectangle Fill="#007749" RadiusX="25" RadiusY="25"/>
+                    <TextBlock Text="Compost" FontSize="24" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Grid>
+                <Button x:Name="AckButton" HorizontalAlignment="Center" Margin="20,10" Click="AckButton_Click">
+                    <TextBlock Text="Ack" FontSize="20" Margin="100,20"/>
+                </Button>
+            </StackPanel>
+        </Grid>
         <Grid x:Name="LabelGrid" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,200">
             <Rectangle Fill="#7F000000"/>
             <TextBlock x:Name="labelBlock" Text="Somewhere on Earth" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="16,8"/>

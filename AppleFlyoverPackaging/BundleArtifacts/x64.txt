@@ -1,2 +1,2 @@
-MainPackage=C:\Users\Sanders\OneDrive\Projects\AppleFlyover\AppleFlyoverPackaging\bin\x64\Debug\AppleFlyoverPackaging_1.15.3.0_x64_Debug.msix
-SymbolPackage=C:\Users\Sanders\OneDrive\Projects\AppleFlyover\AppleFlyoverPackaging\obj\x64\Debug\Symbols\AppleFlyoverPackaging_1.15.3.0_x64_Debug.appxsym
+MainPackage=C:\Users\Sanders\OneDrive\Projects\AppleFlyover\AppleFlyoverPackaging\bin\x64\Debug\AppleFlyoverPackaging_1.16.1.0_x64_Debug.msix
+SymbolPackage=C:\Users\Sanders\OneDrive\Projects\AppleFlyover\AppleFlyoverPackaging\obj\x64\Debug\Symbols\AppleFlyoverPackaging_1.16.1.0_x64_Debug.appxsym
