@@ -154,7 +154,15 @@ namespace AppleFlyover
 
         private async void NetworkInformation_NetworkStatusChanged(object sender)
         {
-            currentNetworkConnectivityLevel = NetworkInformation.GetInternetConnectionProfile().GetNetworkConnectivityLevel();
+            ConnectionProfile connectionProfile = NetworkInformation.GetInternetConnectionProfile();
+            if (connectionProfile == null)
+            {
+                currentNetworkConnectivityLevel = NetworkConnectivityLevel.None;
+            }
+            else
+            {
+                currentNetworkConnectivityLevel = connectionProfile.GetNetworkConnectivityLevel();
+            }
 
             if (currentNetworkConnectivityLevel == NetworkConnectivityLevel.InternetAccess)
             {
